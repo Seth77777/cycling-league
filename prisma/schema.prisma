@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Rider {
+  id          String    @id @default(cuid())
+  firstName   String
+  lastName    String
+  nationality String?
+  birthDate   DateTime?
+  retired     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  stints  TeamStint[]
+  results Result[]
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  country   String?
+  color     String?
+  createdAt DateTime @default(now())
+
+  stints  TeamStint[]
+  results Result[]
+}
+
+/// A rider's stint at a team — the source of truth for career team history.
+/// endDate = null means this is the rider's current team.
+model TeamStint {
+  id        String    @id @default(cuid())
+  riderId   String
+  teamId    String
+  startDate DateTime
+  endDate   DateTime?
+
+  rider Rider @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([riderId])
+  @@index([teamId])
+}
+
+/// A configurable points scale (the user's own system, not UCI). pointsByRank[0]
+/// is the points for 1st place, pointsByRank[1] for 2nd, etc.
+model Category {
+  id           String @id @default(cuid())
+  name         String @unique
+  pointsByRank String // JSON-encoded number[]
+
+  races Race[]
+}
+
+model Race {
+  id         String   @id @default(cuid())
+  name       String
+  date       DateTime
+  season     Int
+  categoryId String
+
+  category Category @relation(fields: [categoryId], references: [id])
+  results  Result[]
+
+  @@index([season])
+}
+
+/// A rider's finishing position in a race. teamId is the team the rider raced for
+/// at the time, kept even if they transfer later, so history stays accurate.
+model Result {
+  id      String @id @default(cuid())
+  raceId  String
+  riderId String
+  teamId  String?
+  rank    Int
+  points  Int
+
+  race  Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  rider Rider  @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  team  Team?  @relation(fields: [teamId], references: [id])
+
+  @@unique([raceId, riderId])
+  @@index([riderId])
+}
