@@ -3,7 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cycling League",
+  title: "L'ère des Superligues",
   description: "Race results, rankings, calendar and rider histories",
 };
 
@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="flex min-h-screen">
           <aside className="w-56 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] px-4 py-6">
             <Link href="/" className="mb-8 block text-lg font-bold tracking-tight text-[var(--accent)]">
-              🚴 Cycling League
+              🚴 L&apos;ère des Superligues
             </Link>
             <nav className="flex flex-col gap-1">
               {NAV.map((item) => (

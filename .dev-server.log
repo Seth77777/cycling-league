@@ -1,0 +1,68 @@
+
+> cycling-league@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.2.102:3000
+- Environments: .env
+✓ Ready in 6.8s
+
+○ Compiling /riders ...
+ GET /riders 200 in 20.6s (next.js: 12.5s, application-code: 8.2s)
+ GET /riders/cmswjijxu000li0vfm0fce6f3 200 in 12.1s (next.js: 5.1s, application-code: 7.0s)
+ GET /rankings 200 in 4.1s (next.js: 3.0s, application-code: 1074ms)
+ GET /teams 200 in 1425ms (next.js: 907ms, application-code: 519ms)
+ GET /races 200 in 1344ms (next.js: 874ms, application-code: 469ms)
+ GET /categories 200 in 1702ms (next.js: 1199ms, application-code: 502ms)
+✓ Finished writing to filesystem cache in 11.0s
+Compaction failed: Failed to compact database
+
+Caused by:
+    0: Failed to merge database files for family 2
+    1: Failed to write compressed value block
+    2: Failed to write block data
+    3: Espace insuffisant sur le disque. (os error 112)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+ GET /riders 200 in 332ms (next.js: 12ms, application-code: 319ms)
+ GET /riders 200 in 395ms (next.js: 31ms, application-code: 364ms)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+ GET /riders/cmswjij1c0007i0vfl7k9mzhl 200 in 363ms (next.js: 48ms, application-code: 315ms)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+ GET / 200 in 1736ms (next.js: 1278ms, application-code: 457ms)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+ GET /riders/cmswjij1c0007i0vfl7k9mzhl 200 in 356ms (next.js: 64ms, application-code: 292ms)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+ GET / 200 in 249ms (next.js: 14ms, application-code: 235ms)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+ GET / 200 in 3.1s (next.js: 636ms, application-code: 2.5s)
+ GET / 200 in 1850ms (next.js: 43ms, application-code: 1807ms)
+ GET / 200 in 1886ms (next.js: 30ms, application-code: 1856ms)
+ GET / 200 in 1884ms (next.js: 689ms, application-code: 1195ms)
+ GET / 200 in 1891ms (next.js: 252ms, application-code: 1639ms)
+ GET / 200 in 1889ms (next.js: 1157ms, application-code: 732ms)
+ GET / 200 in 746ms (next.js: 42ms, application-code: 704ms)
+ GET / 200 in 339ms (next.js: 63ms, application-code: 277ms)
+ GET / 200 in 2.9s (next.js: 639ms, application-code: 2.2s)
+ GET / 200 in 1630ms (next.js: 20ms, application-code: 1610ms)
+ GET / 200 in 1703ms (next.js: 20ms, application-code: 1683ms)
+ GET / 200 in 1705ms (next.js: 651ms, application-code: 1054ms)
+ GET / 200 in 1709ms (next.js: 338ms, application-code: 1370ms)
+ GET / 200 in 1708ms (next.js: 915ms, application-code: 793ms)
+ GET / 200 in 670ms (next.js: 37ms, application-code: 633ms)
+ GET / 200 in 310ms (next.js: 28ms, application-code: 282ms)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
