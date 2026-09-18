@@ -9,6 +9,7 @@ import {
   PRINCIPAL_STATS,
   SECONDARY_STATS,
   TRAININGS,
+  NONE_TRAINING,
   getPotTier,
   getTrainingGain,
   getStatCap,
@@ -27,6 +28,7 @@ export {
   PRINCIPAL_STATS,
   SECONDARY_STATS,
   TRAININGS,
+  NONE_TRAINING,
   POT_TIERS,
   BAREME,
   getPotTier,
@@ -147,11 +149,11 @@ export function computeEvolution(rider: SimRider, plan: Plan, endAge: number = D
       continue;
     }
 
-    const availableTrainings = TRAININGS.filter((t) => getTrainingGain(age, potTier.key, t.key));
+    const availableTrainings = [NONE_TRAINING, ...TRAININGS.filter((t) => getTrainingGain(age, potTier.key, t.key))];
     const stored = plan[age];
     const trainingKey = stored?.trainingKey && availableTrainings.some((t) => t.key === stored.trainingKey)
       ? stored.trainingKey
-      : (availableTrainings[0]?.key ?? "");
+      : NONE_TRAINING.key;
     const gain = getTrainingGain(age, potTier.key, trainingKey);
 
     let notePoints = 0;
@@ -165,8 +167,9 @@ export function computeEvolution(rider: SimRider, plan: Plan, endAge: number = D
       notePick = storedPick && noteCategory.includes(storedPick) ? storedPick : (noteCategory[0] ?? null);
     }
 
-    // Stats whose gain this year would exceed the cap ("wasted" training).
-    const growth = autoSecondaryGrowth(age);
+    // Stats whose gain this year would exceed the cap ("wasted" training). "---" means
+    // 0 evolution, full stop — skip even the automatic secondary growth for that year.
+    const growth = trainingKey === NONE_TRAINING.key ? {} : autoSecondaryGrowth(age);
     const intended: Partial<Record<StatKey, number>> = {};
     const addIntended = (k: StatKey, v: number) => { intended[k] = (intended[k] ?? 0) + v; };
     for (const [k, v] of Object.entries(growth)) addIntended(k as StatKey, v ?? 0);

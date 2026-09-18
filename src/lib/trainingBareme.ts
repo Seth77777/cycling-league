@@ -27,6 +27,11 @@ export interface TrainingDef {
   label: string;
 }
 
+/** Placeholder "no training chosen yet" option — 0 evolution, always available, and the
+ * default for any age the user hasn't touched. Keeps a blank projection blank instead of
+ * silently picking a real training for people who haven't decided anything yet. */
+export const NONE_TRAINING: TrainingDef = { key: "none", label: "---" };
+
 export const TRAININGS: TrainingDef[] = [
   { key: 'grimpeur',       label: 'Grimpeur' },
   { key: 'puncheur',       label: 'Puncheur' },

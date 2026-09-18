@@ -7,6 +7,7 @@ import {
   STAT_KEYS,
   STAT_LABELS,
   TRAININGS,
+  NONE_TRAINING,
   toSimRider,
   computeEvolution,
   applyLuck,
@@ -220,7 +221,7 @@ function luckBadge(delta: number): { className: string; icon: string } {
 
 function ResultRow({ rider, result }: { rider: RiderRow; result: AppliedResult }) {
   const { current, luck } = result;
-  const trainingLabel = TRAININGS.find((t) => t.key === current.trainingKey)?.label;
+  const trainingLabel = [NONE_TRAINING, ...TRAININGS].find((t) => t.key === current.trainingKey)?.label;
   const noteLabel = current.notePick ? ` (+${current.notePoints} ${STAT_LABELS[current.notePick]})` : "";
 
   return (
