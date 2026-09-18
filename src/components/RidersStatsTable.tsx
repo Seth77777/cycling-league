@@ -32,6 +32,9 @@ export type RiderRow = {
   teamId: string | null;
   teamJerseyUrl?: string | null;
   teamColor?: string | null;
+  statPl: number | null; statMo: number | null; statVal: number | null; statClm: number | null;
+  statPrl: number | null; statPav: number | null; statSp: number | null; statAcc: number | null;
+  statDes: number | null; statBar: number | null; statEnd: number | null; statRes: number | null; statRec: number | null;
   [k: string]: unknown;
 };
 
