@@ -88,9 +88,17 @@ export default async function DraftPage({ searchParams }: { searchParams: Promis
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {pool.map((rider) => (
-                  <tr key={rider.id} className="bg-[var(--surface)]">
-                    <td className="whitespace-nowrap px-2 py-1.5 text-center">{rider.lastName}</td>
-                    <td className="whitespace-nowrap px-2 py-1.5 text-center">{rider.firstName}</td>
+                  <tr key={rider.id} className="bg-[var(--surface)] hover:bg-[var(--surface-2)]">
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center">
+                      <Link href={`/draft/${rider.id}`} className="hover:text-[var(--accent)]" title="Simuler un entraînement pluriannuel">
+                        {rider.lastName}
+                      </Link>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center">
+                      <Link href={`/draft/${rider.id}`} className="hover:text-[var(--accent)]">
+                        {rider.firstName}
+                      </Link>
+                    </td>
                     <td className="whitespace-nowrap px-2 py-1.5 text-center text-[var(--text-dim)]">
                       <span className="inline-flex items-center gap-1.5">
                         <Flag nationality={rider.nationality} />

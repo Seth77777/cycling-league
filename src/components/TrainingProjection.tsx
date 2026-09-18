@@ -40,7 +40,7 @@ function tabClass(active: boolean) {
 
 // ── Per-rider evolution table ──────────────────────────────────────────────────
 
-function RiderEvolutionTable({ rider }: { rider: RiderRow }) {
+export function RiderEvolutionTable({ rider }: { rider: RiderRow }) {
   const [plan, setPlan] = useState<Plan>({});
   const sim = useMemo(() => toSimRider(rider), [rider]);
 
