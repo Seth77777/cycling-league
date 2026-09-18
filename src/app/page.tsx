@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import {
   getRiderRankings,
   getTeamRankings,
@@ -35,10 +34,7 @@ function SeeAll({ href, compact = false }: { href: string; compact?: boolean }) 
 export default async function DashboardPage() {
   const seasons = await listSeasons();
   const currentSeason = seasons[0];
-  const [riderCount, teamCount, raceCount, riderRankings, teamRankings, nationRankings, nextRace, randomRiderCard] = await Promise.all([
-    prisma.rider.count(),
-    prisma.team.count(),
-    prisma.race.count(),
+  const [riderRankings, teamRankings, nationRankings, nextRace, randomRiderCard] = await Promise.all([
     currentSeason ? getRiderRankings(currentSeason) : Promise.resolve([]),
     currentSeason ? getTeamRankings(currentSeason) : Promise.resolve([]),
     currentSeason ? getNationRankings(currentSeason) : Promise.resolve([]),
@@ -51,20 +47,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-2xl font-bold">Tableau de bord</h1>
-        <div className="flex gap-6">
-          {[
-            { n: riderCount, label: "coureurs" },
-            { n: teamCount, label: "équipes" },
-            { n: raceCount, label: "courses" },
-          ].map((s) => (
-            <div key={s.label} className="text-right">
-              <div className="font-display text-2xl leading-none text-[var(--text)]">{s.n}</div>
-              <div className="text-xs text-[var(--text-dim)]">{s.label}</div>
-            </div>
-          ))}
-        </div>
+      <div className="flex justify-center py-2">
+        <h1 className="font-hand shine-text text-center text-6xl leading-none">L&apos;ère des Superligues</h1>
       </div>
 
       {nextRace && (

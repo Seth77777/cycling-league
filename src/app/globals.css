@@ -78,6 +78,36 @@ a {
   font-family: var(--font-hand), cursive;
 }
 
+/* Dashboard title: a bright streak sweeps across the text like a shooting star, then
+   pauses before repeating — a gradient-clipped-to-text band animated via background-
+   position, rather than a continuous shimmer. */
+.shine-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--accent) 35%,
+    #fff 48%,
+    #fff 52%,
+    var(--accent) 65%
+  );
+  background-size: 300% 100%;
+  background-position: 200% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine-sweep 4.5s ease-in-out infinite;
+}
+@keyframes shine-sweep {
+  0% { background-position: 200% 0; }
+  35% { background-position: -100% 0; }
+  100% { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shine-text {
+    animation: none;
+    background-position: 0 0;
+  }
+}
+
 /* Star-rating wave: each star (see StarRating.tsx) carries its own animation-delay,
    so this one keyframe rolling across them in sequence reads as a ripple/wave —
    played once when the "group" ancestor (the random-rider card) is hovered. */
