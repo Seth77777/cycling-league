@@ -149,19 +149,7 @@ export function computeEvolution(rider: SimRider, plan: Plan, endAge: number = D
       continue;
     }
 
-    // "Point faible" targets the rider's worst rating and only makes sense while they
-    // actually have one (≤ 68); "Perfection" is the reverse — no rating below 69 left
-    // to single out, so it rewards an already well-rounded rider instead.
-    const worstStat = Math.min(...STAT_KEYS.map((k) => stats[k]));
-    const availableTrainings = [
-      NONE_TRAINING,
-      ...TRAININGS.filter((t) => {
-        if (!getTrainingGain(age, potTier.key, t.key)) return false;
-        if (t.key === "point_faible") return worstStat <= 68;
-        if (t.key === "perfection") return worstStat >= 69;
-        return true;
-      }),
-    ];
+    const availableTrainings = [NONE_TRAINING, ...TRAININGS.filter((t) => getTrainingGain(age, potTier.key, t.key))];
     const stored = plan[age];
     const trainingKey = stored?.trainingKey && availableTrainings.some((t) => t.key === stored.trainingKey)
       ? stored.trainingKey
@@ -174,7 +162,14 @@ export function computeEvolution(rider: SimRider, plan: Plan, endAge: number = D
     if (gain?.type === "note") {
       notePoints = gain.points;
       const cat = gain.category === "principale" ? PRINCIPAL_STATS : SECONDARY_STATS;
-      noteCategory = cat.filter((k) => stats[k] < getStatCap(k, potTier));
+      // "Point faible" can only target a rating that's actually a weak point (≤ 68);
+      // "Perfection" is the reverse — it only targets ratings already at 69+.
+      noteCategory = cat.filter((k) => {
+        if (stats[k] >= getStatCap(k, potTier)) return false;
+        if (trainingKey === "point_faible") return stats[k] <= 68;
+        if (trainingKey === "perfection") return stats[k] >= 69;
+        return true;
+      });
       const storedPick = stored?.trainingKey === trainingKey ? stored.notePick : undefined;
       notePick = storedPick && noteCategory.includes(storedPick) ? storedPick : (noteCategory[0] ?? null);
     }
