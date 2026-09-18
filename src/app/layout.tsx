@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import { Oswald, Caveat } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import { isAdmin } from "@/lib/session";
+import { logout } from "@/lib/authActions";
+
+const oswald = Oswald({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display" });
+const caveat = Caveat({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-hand" });
 
 export const metadata: Metadata = {
   title: "L'ère des Superligues",
@@ -8,24 +14,27 @@ export const metadata: Metadata = {
 };
 
 const NAV = [
-  { href: "/", label: "Dashboard" },
-  { href: "/riders", label: "Riders" },
-  { href: "/teams", label: "Teams" },
-  { href: "/races", label: "Calendar" },
-  { href: "/rankings", label: "Rankings" },
-  { href: "/categories", label: "Categories" },
+  { href: "/", label: "Tableau de bord" },
+  { href: "/riders", label: "Coureurs" },
+  { href: "/teams", label: "Équipes" },
+  { href: "/races", label: "Calendrier" },
+  { href: "/rankings", label: "Classement" },
+  { href: "/draft", label: "Draft" },
+  { href: "/training", label: "Entraînement" },
 ];
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const admin = await isAdmin();
+
   return (
-    <html lang="en">
+    <html lang="en" className={`${oswald.variable} ${caveat.variable}`}>
       <body className="min-h-screen antialiased">
         <div className="flex min-h-screen">
-          <aside className="w-56 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] px-4 py-6">
+          <aside className="flex w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] px-4 py-6">
             <Link href="/" className="mb-8 block text-lg font-bold tracking-tight text-[var(--accent)]">
               🚴 L&apos;ère des Superligues
             </Link>
-            <nav className="flex flex-col gap-1">
+            <nav className="flex flex-1 flex-col gap-1">
               {NAV.map((item) => (
                 <Link
                   key={item.href}
@@ -36,6 +45,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </Link>
               ))}
             </nav>
+            {admin ? (
+              <form action={logout}>
+                <button
+                  type="submit"
+                  className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-[var(--text-dim)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+                >
+                  Déconnexion
+                </button>
+              </form>
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-md px-3 py-2 text-sm font-medium text-[var(--text-dim)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+              >
+                Connexion admin
+              </Link>
+            )}
           </aside>
           <main className="flex-1 px-8 py-8">{children}</main>
         </div>

@@ -1,8 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { createRace } from "@/lib/actions";
+import { getLatestSeason } from "@/lib/queries";
+import { requireAdmin } from "@/lib/session";
 
 export default async function NewRacePage() {
-  const categories = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  await requireAdmin();
+  const [categories, latestSeason] = await Promise.all([
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    getLatestSeason(),
+  ]);
+  const existingCount = await prisma.race.count({
+    where: { season: latestSeason, resultKind: "race", parentRaceId: null },
+  });
 
   return (
     <div className="max-w-lg">
@@ -10,8 +19,8 @@ export default async function NewRacePage() {
       {categories.length === 0 ? (
         <p className="text-sm text-[var(--text-dim)]">
           You need at least one category (points scale) before creating a race. Go to{" "}
-          <a href="/categories" className="text-[var(--accent)] hover:underline">
-            Categories
+          <a href="/rankings?view=baremes" className="text-[var(--accent)] hover:underline">
+            Classement → Barèmes
           </a>{" "}
           first.
         </p>
@@ -21,14 +30,18 @@ export default async function NewRacePage() {
             Race name
             <input name="name" required className="input" />
           </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Pays
+            <input name="country" placeholder="ex. FRA" className="input" />
+          </label>
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1 text-sm">
-              Date
-              <input name="date" type="date" required className="input" />
+              Ordre dans le calendrier
+              <input name="order" type="number" min={1} defaultValue={existingCount + 1} className="input" />
             </label>
             <label className="flex flex-col gap-1 text-sm">
               Season
-              <input name="season" type="number" required defaultValue={new Date().getFullYear()} className="input" />
+              <input name="season" type="number" required defaultValue={latestSeason} className="input" />
             </label>
           </div>
           <label className="flex flex-col gap-1 text-sm">

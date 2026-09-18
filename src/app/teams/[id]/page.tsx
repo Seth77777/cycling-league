@@ -1,72 +1,151 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTeamDetail, fullName } from "@/lib/queries";
-import { getTeamRankings } from "@/lib/queries";
+import { getTeamDetail, getTeamRankings, getLatestSeason, fullName } from "@/lib/queries";
+import { RidersStatsTable, type RiderRow } from "@/components/RidersStatsTable";
+import { TeamJersey } from "@/components/TeamJersey";
+import { isAdmin } from "@/lib/session";
+import { updateTeam } from "@/lib/actions";
 
-function fmtDate(d: Date | null) {
-  return d ? d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "present";
+function fmtSeasonRange(start: number, end: number | null) {
+  if (end === null) return `Saison ${start} — présent`;
+  if (end === start) return `Saison ${start} (transféré avant le début de saison)`;
+  return `Saison ${start} — saison ${end - 1}`;
 }
 
-export default async function TeamDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function TeamDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ season?: string; sort?: string; dir?: string }>;
+}) {
   const { id } = await params;
-  const detail = await getTeamDetail(id);
+  const { season: seasonParam, sort: sortParam, dir: dirParam } = await searchParams;
+  const latestSeason = await getLatestSeason();
+  const season = seasonParam ? Number(seasonParam) : latestSeason;
+  const sort = sortParam || "lastName";
+  const dir: "asc" | "desc" = dirParam === "asc" ? "asc" : "desc" === dirParam ? "desc" : "asc";
+
+  const detail = await getTeamDetail(id, season);
   if (!detail) notFound();
-  const { team, current, past } = detail;
+  const { team, roster, allStints } = detail;
 
   const rankings = await getTeamRankings();
   const standing = rankings.findIndex((r) => r.team.id === team.id);
+  const seasons = Array.from({ length: latestSeason }, (_, i) => i + 1);
+  const admin = await isAdmin();
+
+  const rows: RiderRow[] = roster.map((s) => ({
+    id: s.rider.id,
+    lastName: s.rider.lastName,
+    firstName: s.rider.firstName,
+    nationality: s.rider.nationality,
+    retired: s.rider.retired,
+    age: s.rider.age,
+    potential: s.rider.potential,
+    moyenne: s.rider.moyenne,
+    teamName: null,
+    teamId: null,
+    statPl: s.rider.statPl,
+    statMo: s.rider.statMo,
+    statVal: s.rider.statVal,
+    statClm: s.rider.statClm,
+    statPrl: s.rider.statPrl,
+    statPav: s.rider.statPav,
+    statSp: s.rider.statSp,
+    statAcc: s.rider.statAcc,
+    statDes: s.rider.statDes,
+    statBar: s.rider.statBar,
+    statEnd: s.rider.statEnd,
+    statRes: s.rider.statRes,
+    statRec: s.rider.statRec,
+  }));
+
+  function sortHref(key: string) {
+    const nextDir = sort === key && dir === "desc" ? "asc" : "desc";
+    return `/teams/${id}?season=${season}&sort=${key}&dir=${nextDir}`;
+  }
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center gap-3">
-        <span className="h-4 w-4 rounded-full" style={{ background: team.color ?? "var(--text-dim)" }} />
+      <div className="flex items-center gap-4">
+        <TeamJersey jerseyUrl={team.jerseyUrl} color={team.color} className="h-28 w-28 rounded-lg" />
         <div>
           <h1 className="text-2xl font-bold">{team.name}</h1>
           <p className="text-sm text-[var(--text-dim)]">
-            {team.country ?? "—"}
-            {standing >= 0 && ` · #${standing + 1} in all-time team ranking · ${rankings[standing].points} pts`}
+            {team.country ?? "—"} · Manager : {team.manager ?? "—"}
+            {standing >= 0 && ` · #${standing + 1} au classement toutes saisons · ${rankings[standing].points} pts`}
           </p>
         </div>
       </div>
 
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h2 className="mb-3 font-semibold">Current roster ({current.length})</h2>
-        {current.length === 0 ? (
-          <p className="text-sm text-[var(--text-dim)]">No riders currently signed.</p>
-        ) : (
-          <ul className="grid grid-cols-3 gap-2">
-            {current.map((s) => (
-              <li key={s.id}>
-                <Link
-                  href={`/riders/${s.rider.id}`}
-                  className="block rounded-md border border-[var(--border)] px-3 py-2 text-sm hover:border-[var(--accent)]"
-                >
-                  {fullName(s.rider)}
-                  <div className="text-xs text-[var(--text-dim)]">since {fmtDate(s.startDate)}</div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+      {admin && (
+        <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+          <summary className="cursor-pointer select-none text-sm font-medium text-[var(--text-dim)] hover:text-[var(--accent)]">
+            Modifier l&apos;équipe
+          </summary>
+          <form action={updateTeam} className="mt-3 flex flex-col gap-3 max-w-sm">
+            <input type="hidden" name="id" value={team.id} />
+            <label className="flex flex-col gap-1 text-sm">
+              Nom
+              <input name="name" defaultValue={team.name} required className="input" />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Pays
+              <input name="country" defaultValue={team.country ?? ""} className="input" />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Manager
+              <input name="manager" defaultValue={team.manager ?? ""} className="input" />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Couleur
+              <input name="color" type="color" defaultValue={team.color ?? "#8b93a3"} className="input h-10" />
+            </label>
+            <button type="submit" className="btn btn-primary self-start">
+              Enregistrer
+            </button>
+          </form>
+        </details>
+      )}
+
+      <div className="flex gap-2">
+        {seasons.map((s) => (
+          <Link key={s} href={`/teams/${id}?season=${s}&sort=${sort}&dir=${dir}`} className={`btn ${s === season ? "btn-primary" : ""}`}>
+            Saison {s}
+          </Link>
+        ))}
+      </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-semibold">
+          Effectif — Saison {season} ({roster.length})
+        </h2>
+        <RidersStatsTable
+          rows={rows}
+          sort={sort}
+          dir={dir}
+          sortHref={sortHref}
+          showTeamColumn={false}
+          emptyMessage="Aucun coureur dans l'effectif cette saison-là."
+        />
       </section>
 
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h2 className="mb-3 font-semibold">Past riders ({past.length})</h2>
-        {past.length === 0 ? (
-          <p className="text-sm text-[var(--text-dim)]">No departures recorded.</p>
+        <h2 className="mb-3 font-semibold">Historique complet ({allStints.length})</h2>
+        {allStints.length === 0 ? (
+          <p className="text-sm text-[var(--text-dim)]">Aucun historique enregistré.</p>
         ) : (
           <table className="w-full text-sm">
             <tbody className="divide-y divide-[var(--border)]">
-              {past.map((s) => (
+              {[...allStints].reverse().map((s) => (
                 <tr key={s.id}>
                   <td className="py-2">
                     <Link href={`/riders/${s.rider.id}`} className="hover:text-[var(--accent)]">
                       {fullName(s.rider)}
                     </Link>
                   </td>
-                  <td className="py-2 text-right text-[var(--text-dim)]">
-                    {fmtDate(s.startDate)} — {fmtDate(s.endDate)}
-                  </td>
+                  <td className="py-2 text-right text-[var(--text-dim)]">{fmtSeasonRange(s.startSeason, s.endSeason)}</td>
                 </tr>
               ))}
             </tbody>

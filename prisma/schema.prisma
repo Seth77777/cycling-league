@@ -13,18 +13,86 @@ model Rider {
   lastName    String
   nationality String?
   birthDate   DateTime?
+  age         Int?
+  potential   Int?
   retired     Boolean   @default(false)
   createdAt   DateTime  @default(now())
 
-  stints  TeamStint[]
-  results Result[]
+  /// Season this rider was drafted in. 0 = not drafted (initial import / free-standing rider).
+  draftSeason      Int  @default(0)
+  /// Pick number within that season's draft (reverse-standings order).
+  draftPick        Int?
+  /// Season this rider retired — paired with a draft pick that replaces them.
+  retirementSeason Int?
+  /// Season of the draft this rider was eligible for but not picked. Never joined
+  /// a team — kept on record but excluded from the roster list and profile pages.
+  unpickedSeason   Int?
+
+  // Ability stats (current values, as of the last import/update) —
+  // pl, mo, val, clm, prl, pav, sp, acc, des, bar, end, res, rec.
+  statPl  Int?
+  statMo  Int?
+  statVal Int?
+  statClm Int?
+  statPrl Int?
+  statPav Int?
+  statSp  Int?
+  statAcc Int?
+  statDes Int?
+  statBar Int?
+  statEnd Int?
+  statRes Int?
+  statRec Int?
+  moyenne Float?
+
+  stints      TeamStint[]
+  results     Result[]
+  seasonStats RiderSeasonStats[]
+}
+
+/// A snapshot of a rider's stats for a past season — the Rider's own stat fields
+/// only ever hold the current/latest values, so earlier seasons are archived here
+/// when historical roster data is imported.
+model RiderSeasonStats {
+  id        String @id @default(cuid())
+  riderId   String
+  season    Int
+  age       Int?
+  potential Int?
+  moyenne   Float?
+  statPl    Int?
+  statMo    Int?
+  statVal   Int?
+  statClm   Int?
+  statPrl   Int?
+  statPav   Int?
+  statSp    Int?
+  statAcc   Int?
+  statDes   Int?
+  statBar   Int?
+  statEnd   Int?
+  statRes   Int?
+  statRec   Int?
+
+  rider Rider @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([riderId, season])
 }
 
 model Team {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   country   String?
+  /// The real person managing this team in the league (not a Rider) — shown on the teams list.
+  manager   String?
   color     String?
+  /// Path under /public to the team's jersey image, e.g. "/jerseys/my-team.png". Files
+  /// are placed manually in public/jerseys/ — there's no upload UI.
+  jerseyUrl String?
+  /// For placeholder/simulation teams (e.g. "Team Simu") whose riders aren't real
+  /// league draftees — their results still get recorded, but are left out of the
+  /// individual and team rankings entirely.
+  excludeFromRankings Boolean @default(false)
   createdAt DateTime @default(now())
 
   stints  TeamStint[]
@@ -32,13 +100,14 @@ model Team {
 }
 
 /// A rider's stint at a team — the source of truth for career team history.
-/// endDate = null means this is the rider's current team.
+/// Seasons are plain integers (Season 1, 2, 3…), not calendar dates.
+/// endSeason = null means this is the rider's current team.
 model TeamStint {
-  id        String    @id @default(cuid())
-  riderId   String
-  teamId    String
-  startDate DateTime
-  endDate   DateTime?
+  id          String @id @default(cuid())
+  riderId     String
+  teamId      String
+  startSeason Int
+  endSeason   Int?
 
   rider Rider @relation(fields: [riderId], references: [id], onDelete: Cascade)
   team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -49,25 +118,60 @@ model TeamStint {
 
 /// A configurable points scale (the user's own system, not UCI). pointsByRank[0]
 /// is the points for 1st place, pointsByRank[1] for 2nd, etc.
+///
+/// kind = "simple": one-day / single-classification races. Uses pointsByRank.
+/// kind = "grand-tour": stage races with three separate point pools — stage
+/// results (stagePointsByRank, tripled on time-trial stages via stageTtMultiplier),
+/// the general classification (generalPointsByRank), and jersey classifications
+/// (jerseyPointsByRank, shared as the default scale for each jersey created).
 model Category {
-  id           String @id @default(cuid())
-  name         String @unique
-  pointsByRank String // JSON-encoded number[]
+  id           String  @id @default(cuid())
+  name         String  @unique
+  kind         String  @default("simple")
+  pointsByRank String? // JSON-encoded number[] — kind = "simple"
+
+  stagePointsByRank   String? // JSON-encoded number[] — kind = "grand-tour"
+  stageTtMultiplier   Int     @default(1)
+  generalPointsByRank String? // JSON-encoded number[] — kind = "grand-tour"
+  jerseyPointsByRank  String? // JSON-encoded number[] — kind = "grand-tour"
 
   races Race[]
 }
 
+/// resultKind = "race": a standalone race (kind="simple" category), or the
+/// general-classification event of a grand tour (kind="grand-tour" category).
+/// resultKind = "stage": one stage of a grand tour — parentRaceId points at
+/// the grand tour, stageNumber + isTimeTrial drive its points.
+/// resultKind = "jersey": a secondary classification of a grand tour (e.g.
+/// points or mountains jersey) — parentRaceId points at the grand tour.
 model Race {
   id         String   @id @default(cuid())
   name       String
-  date       DateTime
+  country    String?
+  /// Position in the season's calendar (1, 2, 3…) — races have no real date, just an order.
+  order      Int?
   season     Int
   categoryId String
 
+  resultKind   String  @default("race")
+  parentRaceId String?
+  stageNumber  Int?
+  isTimeTrial  Boolean @default(false)
+  jerseyName   String?
+  /// Path under /public to the race's logo, e.g. "/race-logos/tour-de-france.png". Files
+  /// are placed manually in public/race-logos/ — there's no upload UI (same as Team.jerseyUrl).
+  logoUrl      String?
+  /// Path under /public to the race's route/elevation profile image, e.g.
+  /// "/race-profiles/tour-de-france.png". Same manual placement convention as logoUrl.
+  profileUrl   String?
+
   category Category @relation(fields: [categoryId], references: [id])
+  parent   Race?    @relation("RaceStages", fields: [parentRaceId], references: [id], onDelete: Cascade)
+  children Race[]   @relation("RaceStages")
   results  Result[]
 
   @@index([season])
+  @@index([parentRaceId])
 }
 
 /// A rider's finishing position in a race. teamId is the team the rider raced for
@@ -79,6 +183,7 @@ model Result {
   teamId  String?
   rank    Int
   points  Int
+  time    String? // raw finish time or gap, e.g. "4h15'09\"", "s.t.", "+ 1'24"
 
   race  Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
   rider Rider  @relation(fields: [riderId], references: [id], onDelete: Cascade)

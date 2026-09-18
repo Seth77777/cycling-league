@@ -1,75 +1,90 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { fullName } from "@/lib/queries";
+import { getLatestSeason } from "@/lib/queries";
+import { RidersStatsTable, type RiderRow } from "@/components/RidersStatsTable";
 
-export default async function RidersPage() {
+export default async function RidersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string; dir?: string; season?: string }>;
+}) {
+  const { sort: sortParam, dir: dirParam, season: seasonParam } = await searchParams;
+  const sort = sortParam || "lastName";
+  const dir: "asc" | "desc" = dirParam === "asc" ? "asc" : "desc" === dirParam ? "desc" : "asc";
+  const latestSeason = await getLatestSeason();
+  const season = seasonParam ? Number(seasonParam) : latestSeason;
+  const seasons = Array.from({ length: latestSeason }, (_, i) => i + 1);
+
   const riders = await prisma.rider.findMany({
-    include: { stints: { where: { endDate: null }, include: { team: true } } },
-    orderBy: [{ retired: "asc" }, { lastName: "asc" }],
+    where: { unpickedSeason: null },
+    include: { stints: { include: { team: true } } },
   });
+
+  const rows: RiderRow[] = riders
+    .map((r) => {
+      const stint = r.stints.find((s) => s.startSeason <= season && (s.endSeason === null || season < s.endSeason));
+      return {
+        id: r.id,
+        lastName: r.lastName,
+        firstName: r.firstName,
+        nationality: r.nationality,
+        retired: r.retired,
+        age: r.age,
+        potential: r.potential,
+        moyenne: r.moyenne,
+        teamName: stint?.team.name ?? null,
+        teamId: stint?.team.id ?? null,
+        teamJerseyUrl: stint?.team.jerseyUrl ?? null,
+        teamColor: stint?.team.color ?? null,
+        statPl: r.statPl,
+        statMo: r.statMo,
+        statVal: r.statVal,
+        statClm: r.statClm,
+        statPrl: r.statPrl,
+        statPav: r.statPav,
+        statSp: r.statSp,
+        statAcc: r.statAcc,
+        statDes: r.statDes,
+        statBar: r.statBar,
+        statEnd: r.statEnd,
+        statRes: r.statRes,
+        statRec: r.statRec,
+        _hasStint: stint != null,
+      };
+    })
+    .filter((r) => r._hasStint);
+
+  function sortHref(key: string) {
+    const nextDir = sort === key && dir === "desc" ? "asc" : "desc";
+    return `/riders?season=${season}&sort=${key}&dir=${nextDir}`;
+  }
+
+  function seasonHref(s: number) {
+    return `/riders?season=${s}&sort=${sort}&dir=${dir}`;
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Riders</h1>
-        <Link
-          href="/riders/new"
-          className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black hover:opacity-90"
-        >
-          + New rider
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold">Coureurs</h1>
+        <p className="text-sm text-[var(--text-dim)]">{rows.length} coureurs · cliquez un en-tête pour trier</p>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-[var(--border)]">
-        <table className="w-full text-sm">
-          <thead className="bg-[var(--surface-2)] text-left text-xs uppercase text-[var(--text-dim)]">
-            <tr>
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">Nationality</th>
-              <th className="px-4 py-2">Team</th>
-              <th className="px-4 py-2">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border)]">
-            {riders.map((rider) => {
-              const team = rider.stints[0]?.team;
-              return (
-                <tr key={rider.id} className="bg-[var(--surface)] hover:bg-[var(--surface-2)]">
-                  <td className="px-4 py-2">
-                    <Link href={`/riders/${rider.id}`} className="hover:text-[var(--accent)]">
-                      {fullName(rider)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-[var(--text-dim)]">{rider.nationality ?? "—"}</td>
-                  <td className="px-4 py-2 text-[var(--text-dim)]">
-                    {team ? (
-                      <Link href={`/teams/${team.id}`} className="hover:text-[var(--accent)]">
-                        {team.name}
-                      </Link>
-                    ) : (
-                      "Free agent"
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {rider.retired ? (
-                      <span className="text-[var(--text-dim)]">Retired</span>
-                    ) : (
-                      <span className="text-[var(--accent-2)]">Active</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {riders.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-[var(--text-dim)]">
-                  No riders yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="flex gap-2">
+        {seasons.map((s) => (
+          <Link key={s} href={seasonHref(s)} className={`btn ${s === season ? "btn-primary" : ""}`}>
+            Saison {s}
+          </Link>
+        ))}
       </div>
+
+      <RidersStatsTable
+        rows={rows}
+        sort={sort}
+        dir={dir}
+        sortHref={sortHref}
+        emptyMessage="Aucun coureur dans l'effectif cette saison-là."
+      />
     </div>
   );
 }

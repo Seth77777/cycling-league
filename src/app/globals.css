@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #1b2230;
-  --surface: #252e40;
-  --surface-2: #313c52;
-  --border: #45536b;
-  --text: #f0f4f8;
-  --text-dim: #a3b1c4;
-  --accent: #ffb703;
-  --accent-2: #2ea043;
-  --danger: #f85149;
+  --bg: #12141a;
+  --surface: #1a1d26;
+  --surface-2: #232733;
+  --border: #2f3440;
+  --text: #eceef2;
+  --text-dim: #8b93a3;
+  --accent: #e2a53d;
+  --accent-2: #34b46a;
+  --danger: #e2574c;
+  /* A step darker than --bg — for "spotlight" panels (e.g. the dashboard hero) that need
+     to read as deeper than the page itself, independent of --text (now a light color). */
+  --ink: #05070a;
 }
 
 html,
@@ -65,4 +68,39 @@ a {
 
 .btn-primary:hover {
   opacity: 0.9;
+}
+
+.font-display {
+  font-family: var(--font-display), "Arial Narrow", sans-serif;
+}
+
+.font-hand {
+  font-family: var(--font-hand), cursive;
+}
+
+/* Star-rating wave: each star (see StarRating.tsx) carries its own animation-delay,
+   so this one keyframe rolling across them in sequence reads as a ripple/wave —
+   played once when the "group" ancestor (the random-rider card) is hovered. */
+@keyframes star-wave {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-9px) scale(1.4); }
+}
+.group:hover .star-wave {
+  animation: star-wave 0.5s ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .star-wave {
+    animation: none !important;
+  }
+}
+
+/* Category form: show only the field group matching the selected "kind" radio. */
+.kind-form .kind-grand-tour {
+  display: none;
+}
+.kind-form:has(input[value="grand-tour"]:checked) .kind-simple {
+  display: none;
+}
+.kind-form:has(input[value="grand-tour"]:checked) .kind-grand-tour {
+  display: flex;
 }

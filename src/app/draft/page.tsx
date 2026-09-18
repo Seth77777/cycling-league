@@ -1,0 +1,141 @@
+import Link from "next/link";
+import { getDraftBoard, getLatestSeason, fullName } from "@/lib/queries";
+import { bandColor } from "@/lib/heat";
+import { STAT_COLUMNS } from "@/components/RidersStatsTable";
+import { Flag } from "@/components/Flag";
+
+export default async function DraftPage({ searchParams }: { searchParams: Promise<{ season?: string }> }) {
+  const { season: seasonParam } = await searchParams;
+  const latestSeason = await getLatestSeason();
+  const season = seasonParam ? Number(seasonParam) : latestSeason;
+  const seasons = Array.from({ length: latestSeason }, (_, i) => i + 1);
+
+  const { standingsOrder, picksInOrder, retirees } = await getDraftBoard(season);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-bold">Draft — Saison {season}</h1>
+        <p className="text-sm text-[var(--text-dim)]">
+          Ordre inversé du classement général de la saison {season} — la dernière équipe pioche en premier (une
+          équipe peut piocher plusieurs fois). Les picks rejoignent la ligue en saison {season + 1}.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {seasons.map((s) => (
+          <Link key={s} href={`/draft?season=${s}`} className={`btn ${s === season ? "btn-primary" : ""}`}>
+            Saison {s}
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+          <h2 className="mb-3 font-semibold">Ordre (classement inversé saison {season})</h2>
+          <ol className="flex flex-col gap-1 text-sm">
+            {standingsOrder.map((s) => (
+              <li key={s.team.id} className="flex items-center justify-between">
+                <span>
+                  <span className="mr-2 font-mono text-[var(--text-dim)]">{s.rank}.</span>
+                  <Link href={`/teams/${s.team.id}`} className="hover:text-[var(--accent)]">
+                    {s.team.name}
+                  </Link>
+                </span>
+                <span className="font-mono text-[var(--text-dim)]">{s.points} pts</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+          <h2 className="mb-3 font-semibold">Retraites — Saison {season} ({retirees.length})</h2>
+          {retirees.length === 0 ? (
+            <p className="text-sm text-[var(--text-dim)]">Aucune retraite enregistrée.</p>
+          ) : (
+            <ul className="flex flex-col gap-1 text-sm">
+              {retirees.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/riders/${r.id}`} className="hover:text-[var(--accent)]">
+                    {fullName(r)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-semibold">Choix de la draft — dans l&apos;ordre ({picksInOrder.length})</h2>
+        {picksInOrder.length === 0 ? (
+          <p className="text-sm text-[var(--text-dim)]">Aucun choix enregistré pour cette saison.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--surface-2)] text-center text-xs uppercase text-[var(--text-dim)]">
+                <tr>
+                  <th className="px-2 py-2">Pick</th>
+                  <th className="px-2 py-2">Nom</th>
+                  <th className="px-2 py-2">Prénom</th>
+                  <th className="px-2 py-2">Nat.</th>
+                  <th className="px-2 py-2">Équipe</th>
+                  <th className="px-2 py-2">Âge</th>
+                  <th className="px-2 py-2">POT</th>
+                  {STAT_COLUMNS.map((c) => (
+                    <th key={c.key} className="px-2 py-2">
+                      {c.label}
+                    </th>
+                  ))}
+                  <th className="px-2 py-2">MOY</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {picksInOrder.map(({ rider, team }) => (
+                  <tr key={rider.id} className="bg-[var(--surface)]">
+                    <td className="px-2 py-1.5 text-center font-mono text-[var(--text-dim)]">#{rider.draftPick}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center">
+                      <Link href={`/riders/${rider.id}`} className="hover:text-[var(--accent)]">
+                        {rider.lastName}
+                      </Link>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center">{rider.firstName}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center text-[var(--text-dim)]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Flag nationality={rider.nationality} />
+                        {rider.nationality ?? "—"}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center text-[var(--text-dim)]">
+                      {team ? (
+                        <Link href={`/teams/${team.id}`} className="hover:text-[var(--accent)]">
+                          {team.name}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-2 py-1.5 text-center font-mono">{rider.age ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-center font-mono">{rider.potential ?? "—"}</td>
+                    {STAT_COLUMNS.map((c) => (
+                      <td
+                        key={c.key}
+                        className="px-2 py-1.5 text-center font-mono text-black"
+                        style={{ background: bandColor((rider as Record<string, unknown>)[c.key] as number | null) }}
+                      >
+                        {((rider as Record<string, unknown>)[c.key] as number | null) ?? "—"}
+                      </td>
+                    ))}
+                    <td className="px-2 py-1.5 text-center font-mono text-black" style={{ background: bandColor(rider.moyenne) }}>
+                      {rider.moyenne?.toFixed(2) ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
