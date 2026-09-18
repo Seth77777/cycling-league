@@ -149,7 +149,19 @@ export function computeEvolution(rider: SimRider, plan: Plan, endAge: number = D
       continue;
     }
 
-    const availableTrainings = [NONE_TRAINING, ...TRAININGS.filter((t) => getTrainingGain(age, potTier.key, t.key))];
+    // "Point faible" targets the rider's worst rating and only makes sense while they
+    // actually have one (≤ 68); "Perfection" is the reverse — no rating below 69 left
+    // to single out, so it rewards an already well-rounded rider instead.
+    const worstStat = Math.min(...STAT_KEYS.map((k) => stats[k]));
+    const availableTrainings = [
+      NONE_TRAINING,
+      ...TRAININGS.filter((t) => {
+        if (!getTrainingGain(age, potTier.key, t.key)) return false;
+        if (t.key === "point_faible") return worstStat <= 68;
+        if (t.key === "perfection") return worstStat >= 69;
+        return true;
+      }),
+    ];
     const stored = plan[age];
     const trainingKey = stored?.trainingKey && availableTrainings.some((t) => t.key === stored.trainingKey)
       ? stored.trainingKey
