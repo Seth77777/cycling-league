@@ -82,6 +82,7 @@ a {
    pauses before repeating — a gradient-clipped-to-text band animated via background-
    position, rather than a continuous shimmer. */
 .shine-text {
+  display: inline-block;
   background-image: linear-gradient(
     100deg,
     var(--accent) 35%,
@@ -94,12 +95,19 @@ a {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: shine-sweep 4.5s ease-in-out infinite;
+  animation:
+    shine-sweep 4.5s ease-in-out infinite,
+    gentle-float 3.2s ease-in-out infinite;
 }
 @keyframes shine-sweep {
   0% { background-position: 200% 0; }
   35% { background-position: -100% 0; }
   100% { background-position: -100% 0; }
+}
+/* Light, continuous drift — kept small so it reads as a subtle breathing motion. */
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .shine-text {

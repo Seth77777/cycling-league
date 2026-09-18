@@ -47,8 +47,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex justify-center py-2">
-        <h1 className="font-hand shine-text text-center text-6xl leading-none">L&apos;ère des Superligues</h1>
+      <div className="flex justify-center overflow-visible px-6 py-4">
+        <h1 className="font-hand shine-text text-center text-6xl leading-[1.3]">L&apos;ère des Superligues</h1>
       </div>
 
       {nextRace && (
