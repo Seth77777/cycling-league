@@ -10,7 +10,7 @@ export default async function DraftPage({ searchParams }: { searchParams: Promis
   const season = seasonParam ? Number(seasonParam) : latestSeason;
   const seasons = Array.from({ length: latestSeason }, (_, i) => i + 1);
 
-  const { standingsOrder, picksInOrder, retirees } = await getDraftBoard(season);
+  const { standingsOrder, picksInOrder, pool, retirees } = await getDraftBoard(season);
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,6 +65,59 @@ export default async function DraftPage({ searchParams }: { searchParams: Promis
           )}
         </section>
       </div>
+
+      {pool.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-semibold">Coureurs disponibles — pas encore sélectionnés ({pool.length})</h2>
+          <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--surface-2)] text-center text-xs uppercase text-[var(--text-dim)]">
+                <tr>
+                  <th className="px-2 py-2">Nom</th>
+                  <th className="px-2 py-2">Prénom</th>
+                  <th className="px-2 py-2">Nat.</th>
+                  <th className="px-2 py-2">Âge</th>
+                  <th className="px-2 py-2">POT</th>
+                  {STAT_COLUMNS.map((c) => (
+                    <th key={c.key} className="px-2 py-2">
+                      {c.label}
+                    </th>
+                  ))}
+                  <th className="px-2 py-2">MOY</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {pool.map((rider) => (
+                  <tr key={rider.id} className="bg-[var(--surface)]">
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center">{rider.lastName}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center">{rider.firstName}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-center text-[var(--text-dim)]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Flag nationality={rider.nationality} />
+                        {rider.nationality ?? "—"}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 text-center font-mono">{rider.age ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-center font-mono">{rider.potential ?? "—"}</td>
+                    {STAT_COLUMNS.map((c) => (
+                      <td
+                        key={c.key}
+                        className="px-2 py-1.5 text-center font-mono text-black"
+                        style={{ background: bandColor((rider as Record<string, unknown>)[c.key] as number | null) }}
+                      >
+                        {((rider as Record<string, unknown>)[c.key] as number | null) ?? "—"}
+                      </td>
+                    ))}
+                    <td className="px-2 py-1.5 text-center font-mono text-black" style={{ background: bandColor(rider.moyenne) }}>
+                      {rider.moyenne?.toFixed(2) ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-semibold">Choix de la draft — dans l&apos;ordre ({picksInOrder.length})</h2>

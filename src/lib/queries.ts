@@ -366,15 +366,20 @@ export async function getTeamDetail(id: string, season?: number) {
  */
 export async function getDraftBoard(season: number) {
   const joinSeason = season + 1;
-  const [standings, picks, retirees] = await Promise.all([
+  const [standings, picks, pool, retirees] = await Promise.all([
     getTeamRankings(season),
     prisma.rider.findMany({
-      where: { draftSeason: season },
+      where: { draftSeason: season, draftPick: { not: null } },
       orderBy: { draftPick: "asc" },
       include: {
         // Prefer the drafting team when a rider was immediately transferred (closed stint first).
         stints: { where: { startSeason: joinSeason }, include: { team: true }, orderBy: { endSeason: { sort: "asc", nulls: "last" } } },
       },
+    }),
+    // Prospects eligible for this draft but not yet picked by any team.
+    prisma.rider.findMany({
+      where: { draftSeason: season, draftPick: null },
+      orderBy: { moyenne: "desc" },
     }),
     prisma.rider.findMany({ where: { retirementSeason: season }, orderBy: { lastName: "asc" } }),
   ]);
@@ -388,7 +393,7 @@ export async function getDraftBoard(season: number) {
   // Picks in the order given (by draftPick number), each tagged with the team that drafted them.
   const picksInOrder = picks.map((r) => ({ rider: r, team: r.stints[0]?.team ?? null }));
 
-  return { standingsOrder, picksInOrder, retirees };
+  return { standingsOrder, picksInOrder, pool, retirees };
 }
 
 export async function getRaces(season?: number) {
