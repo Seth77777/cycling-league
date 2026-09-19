@@ -279,6 +279,32 @@ function ResultRow({ rider, result }: { rider: RiderRow; result: AppliedResult }
   );
 }
 
+/** One tab-separated line per trained rider — pastes straight into Excel as columns,
+ * same column order as the sheets used to import a roster (Nom/Prénom/Pays/Âge/POT/
+ * 13 stats/MOY). Age is bumped +1 and moyenne recomputed from the final stats, since
+ * this represents the rider as they'll be next season. */
+function buildExcelBlock(riders: RiderRow[], results: Record<string, AppliedResult>): string {
+  const header = ["Nom", "Prénom", "Pays", "Âge", "POT", ...STAT_KEYS.map((k) => STAT_LABELS[k]), "MOY"].join("\t");
+  const lines = riders.flatMap((r) => {
+    const result = results[r.id];
+    if (!result) return [];
+    const stats = result.luck.finalStats;
+    const moyenne = STAT_KEYS.reduce((sum, k) => sum + stats[k], 0) / STAT_KEYS.length;
+    return [
+      [
+        r.lastName,
+        r.firstName,
+        r.nationality ?? "",
+        result.current.age + 1,
+        result.luck.potentiel,
+        ...STAT_KEYS.map((k) => stats[k]),
+        moyenne.toFixed(2),
+      ].join("\t"),
+    ];
+  });
+  return [header, ...lines].join("\n");
+}
+
 function ResultsTable({
   riders,
   results,
@@ -325,6 +351,19 @@ function ResultsTable({
           </tbody>
         </table>
       </div>
+
+      <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+        <summary className="cursor-pointer select-none text-sm font-medium text-[var(--text-dim)] hover:text-[var(--accent)]">
+          Copier pour Excel (âge saison {season + 1})
+        </summary>
+        <textarea
+          readOnly
+          rows={Math.min(riders.length + 2, 20)}
+          value={buildExcelBlock(riders, results)}
+          onFocus={(e) => e.currentTarget.select()}
+          className="input mt-3 w-full font-mono text-xs"
+        />
+      </details>
     </div>
   );
 }
