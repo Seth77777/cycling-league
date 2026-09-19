@@ -353,7 +353,7 @@ function ResultsTable({
 
       <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
         <summary className="cursor-pointer select-none text-sm font-medium text-[var(--text-dim)] hover:text-[var(--accent)]">
-          Copier pour Excel (âge saison {season + 1})
+          Copier pour Excel (âge saison {season})
         </summary>
         <textarea
           readOnly
