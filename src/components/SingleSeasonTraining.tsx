@@ -284,7 +284,6 @@ function ResultRow({ rider, result }: { rider: RiderRow; result: AppliedResult }
  * 13 stats/MOY). Age is bumped +1 and moyenne recomputed from the final stats, since
  * this represents the rider as they'll be next season. */
 function buildExcelBlock(riders: RiderRow[], results: Record<string, AppliedResult>): string {
-  const header = ["Nom", "Prénom", "Pays", "Âge", "POT", ...STAT_KEYS.map((k) => STAT_LABELS[k]), "MOY"].join("\t");
   const lines = riders.flatMap((r) => {
     const result = results[r.id];
     if (!result) return [];
@@ -302,7 +301,7 @@ function buildExcelBlock(riders: RiderRow[], results: Record<string, AppliedResu
       ].join("\t"),
     ];
   });
-  return [header, ...lines].join("\n");
+  return lines.join("\n");
 }
 
 function ResultsTable({
