@@ -10,6 +10,14 @@ export default async function RacePostPage({ params }: { params: Promise<{ id: s
   const race = await prisma.race.findUnique({ where: { id } });
   if (!race) notFound();
 
+  // A Grand Tour's stages, so a block covering several of them at once can be posted
+  // together — empty for a plain one-day race, which keeps the form single-stage.
+  const hubId = race.parentRaceId ?? (race.resultKind === "race" ? race.id : null);
+  const stages = hubId
+    ? await prisma.race.findMany({ where: { parentRaceId: hubId, resultKind: "stage" }, orderBy: { order: "asc" } })
+    : [];
+  const stageOptions = stages.map((s) => ({ id: s.id, name: s.name }));
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -23,7 +31,7 @@ export default async function RacePostPage({ params }: { params: Promise<{ id: s
           temps.
         </p>
       </div>
-      <PostGeneratorForm raceId={race.id} />
+      <PostGeneratorForm raceId={race.id} stageOptions={stageOptions} />
       <Link href="/test/post-generator" className="self-start text-xs text-[var(--text-dim)] hover:underline">
         Tester avec des données factices (sans toucher à la base) →
       </Link>
