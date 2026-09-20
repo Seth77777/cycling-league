@@ -65,6 +65,7 @@ async function AllTimeRankingSection() {
               <tr>
                 <th className="px-4 py-3 text-left align-middle">#</th>
                 <th className="px-4 py-3 text-left align-middle">Coureur</th>
+                <th className="px-4 py-3 text-left align-middle">Activité</th>
                 <th className="px-4 py-3 text-left align-middle">Équipes</th>
                 <th className="w-28 px-4 py-3 text-right align-middle">Points</th>
               </tr>
@@ -78,6 +79,9 @@ async function AllTimeRankingSection() {
                       <Flag nationality={r.rider.nationality} className="inline-block h-3.5 w-5 shrink-0 rounded-sm object-cover" />
                       {fullName(r.rider)}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3 align-middle whitespace-nowrap text-[var(--text-dim)]">
+                    S{r.rider.draftSeason} → {r.rider.retirementSeason != null ? `S${r.rider.retirementSeason}` : "actif"}
                   </td>
                   <td className="px-4 py-3 align-middle">
                     <div className="flex items-center gap-1">
@@ -93,7 +97,7 @@ async function AllTimeRankingSection() {
               ))}
               {ranking.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-[var(--text-dim)]">
+                  <td colSpan={5} className="px-4 py-6 text-center text-[var(--text-dim)]">
                     Aucun résultat enregistré pour l&apos;instant.
                   </td>
                 </tr>
