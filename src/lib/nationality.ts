@@ -11,8 +11,8 @@ const NATIONALITY_ISO: Record<string, string> = {
   DAN: "dk", ECU: "ec", EGY: "eg", ESP: "es", EST: "ee", ETH: "et", EUR: "eu", FIN: "fi", FRA: "fr", GBR: "gb",
   GER: "de", GRE: "gr", HON: "hu", IRL: "ie", IRN: "ir", ISL: "is", ISR: "il", ITA: "it",
   JAP: "jp", JPN: "jp", KAZ: "kz", KOR: "kr", LET: "lv", LIT: "lt", LUX: "lu", MEX: "mx", NAM: "na",
-  NED: "nl", NOR: "no", NZL: "nz", POL: "pl", POR: "pt", ROM: "ro", RTC: "cz", RUS: "ru",
-  RWA: "rw", SER: "rs", SUE: "se", SUI: "ch", SVK: "sk", SVN: "si", SWD: "se", SWI: "ch",
+  NED: "nl", NOR: "no", NZL: "nz", POL: "pl", POR: "pt", ROM: "ro", ROU: "ro", RTC: "cz", RUS: "ru",
+  RWA: "rw", SER: "rs", SLO: "si", SUE: "se", SUI: "ch", SVK: "sk", SVN: "si", SWD: "se", SWI: "ch",
   TUN: "tn", TUR: "tr", UKR: "ua", USA: "us", VEN: "ve",
 };
 
