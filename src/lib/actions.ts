@@ -353,6 +353,8 @@ export async function generateSeasonCalendar(formData: FormData) {
         order: i + 1,
         season,
         categoryId: (entry.grandTour ? grandTour : classique).id,
+        logoUrl: entry.logoUrl ?? null,
+        profileUrl: entry.profileUrl ?? null,
       },
     });
 

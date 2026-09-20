@@ -1,9 +1,12 @@
-/** The fixed annual race calendar — same lineup every season, in order. */
-export const CALENDAR_TEMPLATE: { name: string; country: string; grandTour: boolean }[] = [
+/** The fixed annual race calendar — same lineup every season, in order. logoUrl/
+ * profileUrl are the same image every year (a race's branding doesn't change
+ * season to season), so they live here once rather than needing re-entry on each
+ * new season's row — see Race.logoUrl/profileUrl for the file-placement convention. */
+export const CALENDAR_TEMPLATE: { name: string; country: string; grandTour: boolean; logoUrl?: string; profileUrl?: string }[] = [
   { name: "Cadel Evans Great Ocean Race", country: "AUS", grandTour: false },
   { name: "Circuit Het Nieuwsblad", country: "BEL", grandTour: false },
   { name: "Strade Bianche", country: "ITA", grandTour: false },
-  { name: "Milan - San Remo", country: "ITA", grandTour: false },
+  { name: "Milan - San Remo", country: "ITA", grandTour: false, logoUrl: "/race-logos/milan-san-remo.svg", profileUrl: "/race-profiles/milan-san-remo.jpg" },
   { name: "Grand Prix E3", country: "BEL", grandTour: false },
   { name: "Gand - Wevelgem", country: "BEL", grandTour: false },
   { name: "Tour d'Italie", country: "ITA", grandTour: true },
