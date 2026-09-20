@@ -19,17 +19,16 @@ export function DraftClassChart({
   const yTicks = 5;
   const niceMax = Math.ceil(maxValue / yTicks / 100) * 100 * yTicks || yTicks;
 
-  const groupWidth = innerWidth / seasons.length;
-  const groupPadding = groupWidth * 0.15;
-  const barsAreaWidth = groupWidth - groupPadding * 2;
-  const barWidth = barsAreaWidth / classes.length;
+  const stepX = seasons.length > 1 ? innerWidth / (seasons.length - 1) : 0;
+  const xForSeason = (si: number) => (seasons.length > 1 ? margin.left + si * stepX : margin.left + innerWidth / 2);
+  const yForValue = (value: number) => margin.top + innerHeight - (value / niceMax) * innerHeight;
 
   return (
     <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
       <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full">
         {Array.from({ length: yTicks + 1 }, (_, i) => {
           const value = (niceMax / yTicks) * i;
-          const y = margin.top + innerHeight - (value / niceMax) * innerHeight;
+          const y = yForValue(value);
           return (
             <g key={i}>
               <line x1={margin.left} x2={width - margin.right} y1={y} y2={y} stroke="var(--border)" strokeDasharray="2,3" />
@@ -40,37 +39,30 @@ export function DraftClassChart({
           );
         })}
 
-        {seasons.map((season, si) => {
-          const groupX = margin.left + si * groupWidth;
+        {seasons.map((season, si) => (
+          <text
+            key={season}
+            x={xForSeason(si)}
+            y={margin.top + innerHeight + 20}
+            textAnchor="middle"
+            fontSize={12}
+            fill="var(--text-dim)"
+          >
+            S{season}
+          </text>
+        ))}
+
+        {classes.map((cls, ci) => {
+          const color = COLORS[ci % COLORS.length];
+          const linePoints = seasons.map((_, si) => `${xForSeason(si)},${yForValue(points[si][ci])}`).join(" ");
           return (
-            <g key={season}>
-              {classes.map((cls, ci) => {
-                const value = points[si][ci];
-                const barHeight = (value / niceMax) * innerHeight;
-                const x = groupX + groupPadding + ci * barWidth;
-                const y = margin.top + innerHeight - barHeight;
-                return (
-                  <rect
-                    key={cls}
-                    x={x + 1}
-                    y={y}
-                    width={Math.max(barWidth - 2, 1)}
-                    height={barHeight}
-                    fill={COLORS[ci % COLORS.length]}
-                  >
-                    <title>{`Saison ${season} — Classe S${cls} : ${value} pts`}</title>
-                  </rect>
-                );
-              })}
-              <text
-                x={groupX + groupWidth / 2}
-                y={margin.top + innerHeight + 20}
-                textAnchor="middle"
-                fontSize={12}
-                fill="var(--text-dim)"
-              >
-                S{season}
-              </text>
+            <g key={cls}>
+              <polyline points={linePoints} fill="none" stroke={color} strokeWidth={2} />
+              {seasons.map((season, si) => (
+                <circle key={season} cx={xForSeason(si)} cy={yForValue(points[si][ci])} r={4} fill={color}>
+                  <title>{`Saison ${season} — Classe S${cls} : ${points[si][ci]} pts`}</title>
+                </circle>
+              ))}
             </g>
           );
         })}
