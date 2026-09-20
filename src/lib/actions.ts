@@ -312,6 +312,22 @@ export async function deleteResult(formData: FormData) {
   revalidatePath("/rankings");
 }
 
+/** Wipes every result for a race in one go — e.g. a whole classification pasted into
+ * the wrong race by mistake, rather than removing each row one by one. Confirmed
+ * client-side before this runs. */
+export async function deleteAllResults(formData: FormData) {
+  await requireAdmin();
+  const raceId = str(formData, "raceId");
+  if (!raceId) throw new Error("Race id is required");
+
+  const race = await prisma.race.findUniqueOrThrow({ where: { id: raceId } });
+  await prisma.result.deleteMany({ where: { raceId } });
+
+  revalidatePath(`/races/${raceId}`);
+  if (race.parentRaceId) revalidatePath(`/races/${race.parentRaceId}`);
+  revalidatePath("/rankings");
+}
+
 /**
  * Builds the season's full calendar from the fixed annual template — same races,
  * same order, every year. Grand tours are created with all 21 stages pre-generated.

@@ -8,6 +8,7 @@ import { RaceLogo } from "@/components/RaceLogo";
 import { Flag } from "@/components/Flag";
 import { TeamJersey } from "@/components/TeamJersey";
 import { DeleteResultButton } from "@/components/DeleteResultButton";
+import { DeleteAllResultsButton } from "@/components/DeleteAllResultsButton";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -93,7 +94,12 @@ export default async function RaceDetailPage({
       )}
 
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h2 className="mb-3 font-semibold">{resultsSectionTitle(race)}</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-semibold">{resultsSectionTitle(race)}</h2>
+          {admin && race.results.length > 0 && (
+            <DeleteAllResultsButton raceId={race.id} raceName={race.name} count={race.results.length} />
+          )}
+        </div>
         {race.results.length === 0 ? (
           <p className="text-sm text-[var(--text-dim)]">Aucun résultat pour le moment.</p>
         ) : (
