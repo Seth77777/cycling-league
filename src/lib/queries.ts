@@ -413,14 +413,17 @@ export async function getDraftBoard(season: number) {
 /**
  * Points scored each season, broken down by "draft class" — riders already in the
  * DB as of season 1 form class S0 (Rider.draftSeason defaults to 0), and riders
- * picked in the season-N draft form class SN.
+ * picked in the season-N draft form class SN. A class is only shown starting the
+ * season it actually joins the league (S0 from season 1, SN from season N+1 —
+ * picked at the end of season N), and disappears once every one of its riders
+ * has retired.
  */
 export async function getPointsByDraftClass() {
   const [results, riders, latestSeason] = await Promise.all([
     prisma.result.findMany({
       select: { points: true, race: { select: { season: true } }, rider: { select: { draftSeason: true } } },
     }),
-    prisma.rider.findMany({ select: { draftSeason: true } }),
+    prisma.rider.findMany({ where: { unpickedSeason: null }, select: { draftSeason: true, retirementSeason: true } }),
     getLatestSeason(),
   ]);
 
@@ -428,13 +431,27 @@ export async function getPointsByDraftClass() {
   const seasons = Array.from({ length: latestSeason }, (_, i) => i + 1);
   const classes = Array.from({ length: maxClass + 1 }, (_, i) => i);
 
+  const ranges = classes.map((cls) => {
+    const members = riders.filter((r) => r.draftSeason === cls);
+    const start = cls === 0 ? 1 : cls + 1;
+    const allRetired = members.length > 0 && members.every((r) => r.retirementSeason != null);
+    const end = allRetired ? Math.max(...members.map((r) => r.retirementSeason as number)) : null;
+    return { start, end };
+  });
+
   const totals = new Map<string, number>();
   for (const r of results) {
     const key = `${r.race.season}-${r.rider.draftSeason}`;
     totals.set(key, (totals.get(key) ?? 0) + r.points);
   }
 
-  const points = seasons.map((season) => classes.map((cls) => totals.get(`${season}-${cls}`) ?? 0));
+  const points = seasons.map((season) =>
+    classes.map((cls, ci) => {
+      const { start, end } = ranges[ci];
+      if (season < start || (end != null && season > end)) return null;
+      return totals.get(`${season}-${cls}`) ?? 0;
+    }),
+  );
 
   return { seasons, classes, points };
 }

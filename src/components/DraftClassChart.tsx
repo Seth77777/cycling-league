@@ -7,7 +7,7 @@ export function DraftClassChart({
 }: {
   seasons: number[];
   classes: number[];
-  points: number[][];
+  points: (number | null)[][];
 }) {
   const width = 900;
   const height = 420;
@@ -15,7 +15,7 @@ export function DraftClassChart({
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
-  const maxValue = Math.max(1, ...points.flat());
+  const maxValue = Math.max(1, ...points.flat().filter((v): v is number => v != null));
   const yTicks = 5;
   const niceMax = Math.ceil(maxValue / yTicks / 100) * 100 * yTicks || yTicks;
 
@@ -62,7 +62,11 @@ export function DraftClassChart({
 
         {classes.map((cls, ci) => {
           const color = COLORS[ci % COLORS.length];
-          const linePoints = seasons.map((_, si) => `${xForSeason(si)},${yForValue(points[si][ci])}`).join(" ");
+          const activeSeasons = seasons
+            .map((season, si) => ({ season, si, value: points[si][ci] }))
+            .filter((p): p is { season: number; si: number; value: number } => p.value != null);
+          if (activeSeasons.length < 2) return null;
+          const linePoints = activeSeasons.map((p) => `${xForSeason(p.si)},${yForValue(p.value)}`).join(" ");
           return (
             <g key={cls}>
               <polyline points={linePoints} fill="none" stroke={color} strokeWidth={2} />
@@ -74,6 +78,7 @@ export function DraftClassChart({
           const color = COLORS[ci % COLORS.length];
           return seasons.map((season, si) => {
             const value = points[si][ci];
+            if (value == null) return null;
             const x = xForSeason(si);
             const y = yForValue(value);
             const label = `S${season} · Classe S${cls} : ${value} pt${value === 1 ? "" : "s"}`;
@@ -123,12 +128,16 @@ export function DraftClassChart({
       </svg>
 
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        {classes.map((cls, ci) => (
-          <span key={cls} className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: COLORS[ci % COLORS.length] }} />
-            Classe S{cls}
-          </span>
-        ))}
+        {classes.map((cls, ci) => {
+          const hasAppeared = points.some((seasonRow) => seasonRow[ci] != null);
+          if (!hasAppeared) return null;
+          return (
+            <span key={cls} className="flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: COLORS[ci % COLORS.length] }} />
+              Classe S{cls}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
