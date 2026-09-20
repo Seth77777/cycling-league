@@ -38,6 +38,40 @@ export default async function RaceDetailPage({
   const stages = race.children.filter((c) => c.resultKind === "stage");
   const jerseys = race.children.filter((c) => c.resultKind === "jersey");
 
+  const isStage = race.resultKind === "stage";
+  const siblingStages = race.parent?.children.filter((c) => c.resultKind === "stage") ?? [];
+  const hubJerseys = race.parent?.children.filter((c) => c.resultKind === "jersey") ?? [];
+  const prevStage = isStage ? siblingStages.find((s) => s.stageNumber === (race.stageNumber ?? 0) - 1) : undefined;
+  const nextStage = isStage ? siblingStages.find((s) => s.stageNumber === (race.stageNumber ?? 0) + 1) : undefined;
+
+  const stageNav = isStage && race.parent && (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+      {prevStage ? (
+        <Link href={`/races/${prevStage.id}`} className="text-sm font-medium text-[var(--accent)] hover:underline">
+          ← Étape {prevStage.stageNumber}
+        </Link>
+      ) : (
+        <span />
+      )}
+      {nextStage ? (
+        <Link href={`/races/${nextStage.id}`} className="text-sm font-medium text-[var(--accent)] hover:underline">
+          Étape {nextStage.stageNumber} →
+        </Link>
+      ) : (
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Link href={`/races/${race.parent.id}`} className="text-sm font-medium text-[var(--accent)] hover:underline">
+            Classement général →
+          </Link>
+          {hubJerseys.map((j) => (
+            <Link key={j.id} href={`/races/${j.id}`} className="text-sm text-[var(--text-dim)] hover:text-[var(--accent)] hover:underline">
+              {j.jerseyName} →
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between">
@@ -73,6 +107,8 @@ export default async function RaceDetailPage({
           </Link>
         )}
       </div>
+
+      {stageNav}
 
       {admin && race.resultKind === "stage" && (
         <details className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
@@ -162,6 +198,8 @@ export default async function RaceDetailPage({
           </table>
         )}
       </section>
+
+      {stageNav}
 
       {admin && (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">

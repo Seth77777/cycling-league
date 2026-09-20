@@ -506,7 +506,9 @@ export async function getRaceDetail(id: string) {
     where: { id },
     include: {
       category: true,
-      parent: true,
+      // For a stage, the parent's own children (siblings) drive the "étape
+      // précédente/suivante" nav and the "général & annexes" links after the last one.
+      parent: { include: { children: { orderBy: [{ resultKind: "asc" }, { stageNumber: "asc" }] } } },
       results: { include: { rider: true, team: true }, orderBy: { rank: "asc" } },
       children: {
         include: { _count: { select: { results: true } } },
