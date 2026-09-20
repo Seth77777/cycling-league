@@ -456,6 +456,37 @@ export async function getPointsByDraftClass() {
   return { seasons, classes, points };
 }
 
+/** All-time career points ranking — every rider's Result.points summed across every season played. */
+export async function getAllTimeRiderRanking() {
+  const totals = await prisma.result.groupBy({
+    by: ["riderId"],
+    _sum: { points: true },
+  });
+
+  const riders = await prisma.rider.findMany({
+    where: { id: { in: totals.map((t) => t.riderId) } },
+    include: { stints: { include: { team: true }, orderBy: { startSeason: "asc" } } },
+  });
+  const riderById = new Map(riders.map((r) => [r.id, r]));
+
+  return totals
+    .map((t) => {
+      const rider = riderById.get(t.riderId);
+      if (!rider) return null;
+      const teams: (typeof rider.stints)[number]["team"][] = [];
+      const seen = new Set<string>();
+      for (const s of rider.stints) {
+        if (!seen.has(s.teamId)) {
+          seen.add(s.teamId);
+          teams.push(s.team);
+        }
+      }
+      return { rider, points: t._sum.points ?? 0, teams };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null)
+    .sort((a, b) => b.points - a.points);
+}
+
 export async function getRaces(season?: number) {
   return prisma.race.findMany({
     where: { resultKind: "race", parentRaceId: null, ...(season ? { season } : {}) },
