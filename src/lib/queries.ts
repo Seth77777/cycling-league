@@ -410,6 +410,35 @@ export async function getDraftBoard(season: number) {
   return { standingsOrder, picksInOrder, pool, retirees };
 }
 
+/**
+ * Points scored each season, broken down by "draft class" — riders already in the
+ * DB as of season 1 form class S0 (Rider.draftSeason defaults to 0), and riders
+ * picked in the season-N draft form class SN.
+ */
+export async function getPointsByDraftClass() {
+  const [results, riders, latestSeason] = await Promise.all([
+    prisma.result.findMany({
+      select: { points: true, race: { select: { season: true } }, rider: { select: { draftSeason: true } } },
+    }),
+    prisma.rider.findMany({ select: { draftSeason: true } }),
+    getLatestSeason(),
+  ]);
+
+  const maxClass = riders.reduce((max, r) => Math.max(max, r.draftSeason), 0);
+  const seasons = Array.from({ length: latestSeason }, (_, i) => i + 1);
+  const classes = Array.from({ length: maxClass + 1 }, (_, i) => i);
+
+  const totals = new Map<string, number>();
+  for (const r of results) {
+    const key = `${r.race.season}-${r.rider.draftSeason}`;
+    totals.set(key, (totals.get(key) ?? 0) + r.points);
+  }
+
+  const points = seasons.map((season) => classes.map((cls) => totals.get(`${season}-${cls}`) ?? 0));
+
+  return { seasons, classes, points };
+}
+
 export async function getRaces(season?: number) {
   return prisma.race.findMany({
     where: { resultKind: "race", parentRaceId: null, ...(season ? { season } : {}) },

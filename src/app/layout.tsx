@@ -21,6 +21,7 @@ const NAV = [
   { href: "/rankings", label: "Classement" },
   { href: "/draft", label: "Draft" },
   { href: "/training", label: "Entraînement" },
+  { href: "/statistiques", label: "Statistiques" },
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
