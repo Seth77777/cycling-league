@@ -25,7 +25,15 @@ export function DraftClassChart({
 
   return (
     <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full overflow-visible">
+        <style>
+          {`
+            .chart-hit { cursor: pointer; }
+            .chart-tooltip { opacity: 0; pointer-events: none; transition: opacity 0.1s ease; }
+            .chart-hit:hover ~ .chart-tooltip { opacity: 1; }
+          `}
+        </style>
+
         {Array.from({ length: yTicks + 1 }, (_, i) => {
           const value = (niceMax / yTicks) * i;
           const y = yForValue(value);
@@ -58,13 +66,36 @@ export function DraftClassChart({
           return (
             <g key={cls}>
               <polyline points={linePoints} fill="none" stroke={color} strokeWidth={2} />
-              {seasons.map((season, si) => (
-                <circle key={season} cx={xForSeason(si)} cy={yForValue(points[si][ci])} r={4} fill={color}>
-                  <title>{`Saison ${season} — Classe S${cls} : ${points[si][ci]} pts`}</title>
-                </circle>
-              ))}
             </g>
           );
+        })}
+
+        {classes.map((cls, ci) => {
+          const color = COLORS[ci % COLORS.length];
+          return seasons.map((season, si) => {
+            const value = points[si][ci];
+            const x = xForSeason(si);
+            const y = yForValue(value);
+            const label = `S${season} · Classe S${cls} : ${value} pt${value === 1 ? "" : "s"}`;
+            const boxWidth = Math.max(90, label.length * 6.3 + 16);
+            const showBelow = y - margin.top < 34;
+            const boxY = showBelow ? y + 12 : y - 34;
+            const textY = showBelow ? y + 27 : y - 19;
+            const boxX = Math.min(Math.max(x - boxWidth / 2, margin.left), width - margin.right - boxWidth);
+
+            return (
+              <g key={`${cls}-${season}`}>
+                <circle cx={x} cy={y} r={4} fill={color} />
+                <circle className="chart-hit" cx={x} cy={y} r={10} fill="transparent" />
+                <g className="chart-tooltip">
+                  <rect x={boxX} y={boxY} width={boxWidth} height={22} rx={5} fill="#111827" stroke={color} strokeWidth={1} />
+                  <text x={boxX + boxWidth / 2} y={textY} textAnchor="middle" fontSize={11} fill="#f3f4f6">
+                    {label}
+                  </text>
+                </g>
+              </g>
+            );
+          });
         })}
 
         <line x1={margin.left} x2={margin.left} y1={margin.top} y2={margin.top + innerHeight} stroke="var(--border)" />
