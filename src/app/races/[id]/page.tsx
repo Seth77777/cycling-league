@@ -7,6 +7,7 @@ import { isAdmin } from "@/lib/session";
 import { RaceLogo } from "@/components/RaceLogo";
 import { Flag } from "@/components/Flag";
 import { TeamJersey } from "@/components/TeamJersey";
+import { DeleteResultButton } from "@/components/DeleteResultButton";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -119,6 +120,11 @@ export default async function RaceDetailPage({
                   </td>
                   <td className="py-2 text-[var(--text-dim)]">{r.time ?? "—"}</td>
                   <td className="py-2 text-right font-mono">{r.points > 0 ? `${r.points} pts` : ""}</td>
+                  {admin && (
+                    <td className="py-2 pl-2 text-right">
+                      <DeleteResultButton resultId={r.id} riderName={fullName(r.rider)} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -131,9 +137,10 @@ export default async function RaceDetailPage({
           <h2 className="mb-1 font-semibold">Coller un classement</h2>
           <p className="mb-3 text-xs text-[var(--text-dim)]">
             Une ligne par coureur : rang, nom du coureur, équipe (optionnelle), temps/écart (&quot;s.t.&quot;, &quot;+
-            1&apos;24&quot;, &quot;4h15&apos;09&quot;&quot;…). L&apos;équipe utilisée est celle du coureur pendant la
-            saison de cette course, pas celle du texte collé ni son équipe actuelle. Les lignes dont le coureur
-            n&apos;est pas reconnu (fautes de frappe, coureurs simulés…) sont ignorées.
+            1&apos;24&quot;, &quot;4h15&apos;09&quot;&quot;…) — pas de temps du tout après le nom : considéré comme
+            s.t. automatiquement. L&apos;équipe utilisée est celle du coureur pendant la saison de cette course, pas
+            celle du texte collé ni son équipe actuelle. Les lignes dont le coureur n&apos;est pas reconnu (fautes de
+            frappe, coureurs simulés…) sont ignorées.
             {" "}Barème : {scale.join(" / ") || "non configuré"}
             {race.resultKind === "stage" && race.isTimeTrial && ` (×${race.category.stageTtMultiplier} car CLM)`}
           </p>

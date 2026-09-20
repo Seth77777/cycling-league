@@ -282,7 +282,9 @@ export async function bulkAddResults(formData: FormData) {
     if (!Number.isInteger(rank) || rank < 1) continue;
 
     const rest = tokens.slice(1);
-    const time = extractTimeGap(tokens);
+    // No recognizable time/gap token at all (just rank + name) — assume same time as
+    // the leader rather than making the admin type "s.t." for most of the field.
+    const time = extractTimeGap(tokens) ?? "s.t.";
     entries.push({ rank, name: rest.join(" "), time });
   }
 
@@ -294,6 +296,20 @@ export async function bulkAddResults(formData: FormData) {
 
   const gapsParam = gaps.length > 0 ? `&gaps=${gaps.join(",")}` : "";
   redirect(`/races/${raceId}?imported=${imported}&skipped=${skipped}${gapsParam}`);
+}
+
+/** Removes a single result — e.g. a stage classification pasted into the wrong race
+ * (general/mountain/points/team...) by mistake. Confirmed client-side before this runs. */
+export async function deleteResult(formData: FormData) {
+  await requireAdmin();
+  const resultId = str(formData, "resultId");
+  if (!resultId) throw new Error("Result id is required");
+
+  const result = await prisma.result.delete({ where: { id: resultId }, include: { race: true } });
+
+  revalidatePath(`/races/${result.raceId}`);
+  if (result.race.parentRaceId) revalidatePath(`/races/${result.race.parentRaceId}`);
+  revalidatePath("/rankings");
 }
 
 /**

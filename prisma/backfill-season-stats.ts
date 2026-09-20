@@ -24,7 +24,12 @@ function nameKey(firstName: string, lastName: string): string {
   return `${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}`;
 }
 
-async function backfill(season: number, fileName: string) {
+/**
+ * `colsBeforeAge` accounts for a layout difference between source files: the S2/S3
+ * exports have a blank column between Prénom and Pays (2 columns before Âge), while
+ * the S1 file (pasted directly, no game-export quirk) has just Pays (1 column).
+ */
+async function backfill(season: number, fileName: string, colsBeforeAge: number) {
   const filePath = path.resolve(process.cwd(), "prisma/data", fileName);
   const lines = fs.readFileSync(filePath, "utf-8").split("\n").map((l) => l.replace(/\r$/, "")).filter((l) => l.trim() !== "");
 
@@ -35,7 +40,10 @@ async function backfill(season: number, fileName: string) {
   let skipped = 0;
   for (const line of lines) {
     const cols = line.split("\t");
-    const [lastName, firstName, , , ageRaw, potentialRaw, ...rest] = cols;
+    const [lastName, firstName, ...afterName] = cols;
+    const ageRaw = afterName[colsBeforeAge];
+    const potentialRaw = afterName[colsBeforeAge + 1];
+    const rest = afterName.slice(colsBeforeAge + 2);
     const stats = rest.slice(0, 13);
     const moyenneRaw = rest[13];
     if (!lastName || !firstName) continue;
@@ -71,8 +79,9 @@ async function backfill(season: number, fileName: string) {
 }
 
 async function main() {
-  await backfill(2, "season2-riders.tsv");
-  await backfill(3, "season3-riders.tsv");
+  await backfill(1, "season1-riders.tsv", 1);
+  await backfill(2, "season2-riders.tsv", 2);
+  await backfill(3, "season3-riders.tsv", 2);
 }
 
 main()
