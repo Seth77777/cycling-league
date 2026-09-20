@@ -28,3 +28,24 @@ export const CALENDAR_TEMPLATE: { name: string; country: string; grandTour: bool
 ] as const;
 
 export const GRAND_TOUR_STAGE_COUNT = 21;
+
+/**
+ * The 3 Grand Tours repeat their route on a 2-year cycle — odd seasons use the 2018
+ * parcours, even seasons use 2017 — so a stage's profile image only needs 2 variants
+ * total, not one per season. `null` slots are stages whose profile hasn't been placed
+ * yet; see prisma/backfill-stage-profiles.ts to apply new ones retroactively once they
+ * are. File convention: public/race-profiles/<tour-slug>-<2017|2018>-etape-<n>.jpg.
+ */
+export const GRAND_TOUR_STAGE_PROFILES: Record<string, { y2017: (string | null)[]; y2018: (string | null)[] }> = {
+  "Tour d'Italie": { y2017: Array(GRAND_TOUR_STAGE_COUNT).fill(null), y2018: Array(GRAND_TOUR_STAGE_COUNT).fill(null) },
+  "Tour de France": { y2017: Array(GRAND_TOUR_STAGE_COUNT).fill(null), y2018: Array(GRAND_TOUR_STAGE_COUNT).fill(null) },
+  "Tour d'Espagne": { y2017: Array(GRAND_TOUR_STAGE_COUNT).fill(null), y2018: Array(GRAND_TOUR_STAGE_COUNT).fill(null) },
+};
+
+/** logoUrl/profileUrl for one stage of a Grand Tour, given the tour's own season-parity rule. */
+export function grandTourStageProfile(tourName: string, stageNumber: number, season: number): string | null {
+  const table = GRAND_TOUR_STAGE_PROFILES[tourName];
+  if (!table) return null;
+  const route = season % 2 === 1 ? table.y2018 : table.y2017;
+  return route[stageNumber - 1] ?? null;
+}

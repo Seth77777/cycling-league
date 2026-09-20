@@ -77,7 +77,7 @@ export async function getRiderRankings(season?: number) {
       ...(season ? { race: { season } } : {}),
       NOT: { team: { excludeFromRankings: true } },
     },
-    include: { rider: true, team: true },
+    include: { rider: true, team: true, race: { select: { isTeamTimeTrial: true } } },
     // Ascending so the last result processed per rider is their most recent race —
     // used below to show the team they were riding for most recently in this ranking.
     orderBy: [{ race: { season: "asc" } }, { race: { order: "asc" } }],
@@ -97,7 +97,9 @@ export async function getRiderRankings(season?: number) {
 
   for (const r of results) {
     const entry = byRider.get(r.riderId) ?? { rider: r.rider, team: r.team, points: 0, wins: 0, podiums: 0, races: 0 };
-    entry.points += r.points;
+    // Team time trial points count only toward the team ranking, never the individual
+    // one — but a rider still keeps their win/podium credit and race count for it.
+    if (!r.race.isTeamTimeTrial) entry.points += r.points;
     entry.races += 1;
     if (r.rank === 1) entry.wins += 1;
     if (r.rank <= 3) entry.podiums += 1;
@@ -214,13 +216,25 @@ export async function getTeamRankings(season?: number) {
     string,
     { team: NonNullable<(typeof results)[number]["team"]>; points: number; wins: number; podiums: number }
   >();
+  // A win/podium counts once per race for the TEAM, no matter how many of its riders
+  // individually placed there — matters for a team time trial (several riders share
+  // the winning rank) but is a correct rule generally too (e.g. two team-mates on
+  // the same podium shouldn't double the team's podium tally).
+  const wonRaces = new Map<string, Set<string>>();
+  const podiumRaces = new Map<string, Set<string>>();
 
   for (const r of results) {
     if (!r.team) continue;
     const entry = byTeam.get(r.teamId!) ?? { team: r.team, points: 0, wins: 0, podiums: 0 };
     entry.points += r.points;
-    if (r.rank === 1) entry.wins += 1;
-    if (r.rank <= 3) entry.podiums += 1;
+    if (r.rank === 1) {
+      const races = wonRaces.get(r.teamId!) ?? new Set<string>();
+      if (!races.has(r.raceId)) { entry.wins += 1; races.add(r.raceId); wonRaces.set(r.teamId!, races); }
+    }
+    if (r.rank <= 3) {
+      const races = podiumRaces.get(r.teamId!) ?? new Set<string>();
+      if (!races.has(r.raceId)) { entry.podiums += 1; races.add(r.raceId); podiumRaces.set(r.teamId!, races); }
+    }
     byTeam.set(r.teamId!, entry);
   }
 

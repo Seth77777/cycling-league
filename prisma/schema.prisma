@@ -157,6 +157,11 @@ model Race {
   parentRaceId String?
   stageNumber  Int?
   isTimeTrial  Boolean @default(false)
+  /// Team time trial: the top teams (not individual riders) score tripled points per
+  /// the stage barème — see applyRaceResults in src/lib/actions.ts. Doesn't count
+  /// toward individual rankings, only team rankings (and still counts as a win for
+  /// the riders listed under the winning team in the pasted results).
+  isTeamTimeTrial Boolean @default(false)
   jerseyName   String?
   /// Path under /public to the race's logo, e.g. "/race-logos/tour-de-france.png". Files
   /// are placed manually in public/race-logos/ — there's no upload UI (same as Team.jerseyUrl).

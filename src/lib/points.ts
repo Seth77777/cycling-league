@@ -23,6 +23,7 @@ interface CategoryLike {
 interface RaceLike {
   resultKind: string;
   isTimeTrial: boolean;
+  isTeamTimeTrial?: boolean;
 }
 
 /** The points scale that applies to a given race (or stage/jersey of a grand tour). */
@@ -37,6 +38,6 @@ export function scaleForRace(category: CategoryLike, race: RaceLike): number[] {
 /** Points for a given finishing rank in a race, including the time-trial multiplier for stages. */
 export function computeResultPoints(category: CategoryLike, race: RaceLike, rank: number): number {
   const base = pointsForRank(scaleForRace(category, race), rank);
-  if (race.resultKind === "stage" && race.isTimeTrial) return base * category.stageTtMultiplier;
+  if (race.resultKind === "stage" && (race.isTimeTrial || race.isTeamTimeTrial)) return base * category.stageTtMultiplier;
   return base;
 }

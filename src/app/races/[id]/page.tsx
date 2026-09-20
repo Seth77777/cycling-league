@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRaceDetail, fullName } from "@/lib/queries";
-import { createStage, createJersey, bulkAddResults } from "@/lib/actions";
+import { createStage, createJersey, bulkAddResults, updateStage } from "@/lib/actions";
 import { scaleForRace } from "@/lib/points";
 import { isAdmin } from "@/lib/session";
 import { RaceLogo } from "@/components/RaceLogo";
@@ -59,6 +59,11 @@ export default async function RaceDetailPage({
                 CLM · ×{race.category.stageTtMultiplier}
               </span>
             )}
+            {race.resultKind === "stage" && race.isTeamTimeTrial && (
+              <span className="ml-2 rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--accent)]">
+                CLM par équipes · ×{race.category.stageTtMultiplier}
+              </span>
+            )}
           </p>
           </div>
         </div>
@@ -68,6 +73,26 @@ export default async function RaceDetailPage({
           </Link>
         )}
       </div>
+
+      {admin && race.resultKind === "stage" && (
+        <details className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+          <summary className="cursor-pointer select-none text-sm font-medium text-[var(--text-dim)] hover:text-[var(--accent)]">
+            Modifier l&apos;étape
+          </summary>
+          <form action={updateStage} className="mt-3 flex flex-col gap-2">
+            <input type="hidden" name="raceId" value={race.id} />
+            <label className="flex items-center gap-2 text-sm">
+              <input name="isTimeTrial" type="checkbox" defaultChecked={race.isTimeTrial} /> CLM (contre-la-montre individuel)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input name="isTeamTimeTrial" type="checkbox" defaultChecked={race.isTeamTimeTrial} /> CLM par équipes
+            </label>
+            <button type="submit" className="btn btn-primary mt-1 self-start">
+              Enregistrer
+            </button>
+          </form>
+        </details>
+      )}
 
       {imported != null && (
         <div className="rounded-lg border border-[var(--accent)] bg-[var(--surface)] px-4 py-3 text-sm">

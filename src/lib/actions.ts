@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma";
 import { computeResultPoints } from "@/lib/points";
-import { CALENDAR_TEMPLATE, GRAND_TOUR_STAGE_COUNT } from "@/lib/calendarTemplate";
+import { CALENDAR_TEMPLATE, GRAND_TOUR_STAGE_COUNT, grandTourStageProfile } from "@/lib/calendarTemplate";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/session";
@@ -150,6 +150,22 @@ export async function createStage(formData: FormData) {
   revalidatePath(`/races/${parentRaceId}`);
 }
 
+/** Toggles CLM/CLM par équipes on a stage that's already been created — the season
+ * calendar generates all 21 stages up front with neither flag set, so this is the
+ * only way to mark one after the fact, before pasting its results. */
+export async function updateStage(formData: FormData) {
+  await requireAdmin();
+  const raceId = str(formData, "raceId");
+  if (!raceId) throw new Error("Race id is required");
+  const isTimeTrial = str(formData, "isTimeTrial") === "on";
+  const isTeamTimeTrial = str(formData, "isTeamTimeTrial") === "on";
+
+  const race = await prisma.race.update({ where: { id: raceId }, data: { isTimeTrial, isTeamTimeTrial } });
+
+  revalidatePath(`/races/${raceId}`);
+  if (race.parentRaceId) revalidatePath(`/races/${race.parentRaceId}`);
+}
+
 export async function createJersey(formData: FormData) {
   await requireAdmin();
   const parentRaceId = str(formData, "parentRaceId");
@@ -236,12 +252,41 @@ export async function applyRaceResults(race: RaceForResults, entries: { rank: nu
     throw new Error(`Coureur(s) sans équipe en saison ${race.season} — mets à jour leur effectif avant d'importer : ${list}`);
   }
 
+  // Team time trial: every rider takes their TEAM's rank (the order distinct teams
+  // first appear among the matched riders, since a team's riders finish consecutively
+  // in one block) instead of their own sequential position — a real TTT has no
+  // meaningful sub-ranking between team-mates, and this is what makes win/podium
+  // credit (rank === 1 / rank <= 3) correctly apply to every rider of the winning
+  // team, not just whoever happened to be listed first. Points: only the first rider
+  // of each team's block actually carries the point value — the rest get 0 — so
+  // summing per team for team rankings (getTeamRankings) isn't inflated by roster
+  // size, while getRiderRankings excludes these points from individual totals
+  // entirely regardless of which row carries them.
+  const teamRankByTeamId = new Map<string, number>();
+  if (race.isTeamTimeTrial) {
+    for (const { rider } of matches) {
+      const teamId = stintForRaceSeason(rider)?.teamId;
+      if (teamId && !teamRankByTeamId.has(teamId)) teamRankByTeamId.set(teamId, teamRankByTeamId.size + 1);
+    }
+  }
+  const teamAlreadyScored = new Set<string>();
+
   const results: { rank: number; time: string | null; points: number; rider: Rider; team: Rider["stints"][number]["team"] | null }[] = [];
   for (const [i, { entry, rider }] of matches.entries()) {
-    const rank = i + 1; // position among matched riders only, not the raw export rank
     const stint = stintForRaceSeason(rider);
     const teamId = stint?.teamId ?? null;
-    const points = computeResultPoints(race.category, race, rank);
+    const teamRank = teamId ? teamRankByTeamId.get(teamId) : undefined;
+    const rank = race.isTeamTimeTrial && teamRank ? teamRank : i + 1; // sequential among matched riders, unless TTT
+
+    let points: number;
+    if (race.isTeamTimeTrial && teamId) {
+      const isFirstOfTeam = !teamAlreadyScored.has(teamId);
+      teamAlreadyScored.add(teamId);
+      points = isFirstOfTeam ? computeResultPoints(race.category, race, teamRank!) : 0;
+    } else {
+      points = computeResultPoints(race.category, race, rank);
+    }
+
     await prisma.result.upsert({
       where: { raceId_riderId: { raceId: race.id, riderId: rider.id } },
       create: { raceId: race.id, riderId: rider.id, teamId, rank, points, time: entry.time },
@@ -369,6 +414,7 @@ export async function generateSeasonCalendar(formData: FormData) {
             resultKind: "stage",
             parentRaceId: race.id,
             stageNumber: n,
+            profileUrl: grandTourStageProfile(entry.name, n, season),
           },
         });
       }
