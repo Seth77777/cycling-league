@@ -10,6 +10,7 @@ import { nationalityToIso } from "@/lib/nationality";
 import { pointsForRank } from "@/lib/points";
 import { findRankGaps } from "@/lib/rankGaps";
 import { normalizeName } from "@/lib/names";
+import { stintForSeason } from "@/lib/teamHistory";
 
 const MEDAL_COLOR: Record<number, string> = { 1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32" };
 const TOP_CUT = 15;
@@ -220,7 +221,7 @@ function assembleFinalPost(leadingImages: string[], stageSections: string[], cla
 async function buildRiderIndex() {
   const riders = await prisma.rider.findMany({
     where: { unpickedSeason: null },
-    include: { stints: { where: { endSeason: null }, include: { team: true } } },
+    include: { stints: { include: { team: true } } },
   });
   return new Map(riders.map((r) => [normalizeName(`${r.firstName} ${r.lastName}`), r]));
 }
@@ -235,6 +236,7 @@ function renderSheet(
   sheet: PcmSheet,
   riderIndex: Awaited<ReturnType<typeof buildRiderIndex>>,
   teamIndex: Awaited<ReturnType<typeof buildTeamIndex>>,
+  season: number,
 ): Section {
   if (sheet.kind === "team") {
     const rows = sheet.rows.map((r) => {
@@ -247,7 +249,7 @@ function renderSheet(
   const rows = sheet.rows.map((r) => {
     const rider = riderIndex.get(normalizeName(r.label));
     const nameCell = `${rider ? flagImg(rider.nationality) : ""} ${r.label}`.trim();
-    const team = rider?.stints[0]?.team;
+    const team = rider ? stintForSeason(rider.stints, season)?.team : undefined;
     const teamName = r.team || team?.name || "—";
     return [rankCell(r.rank), nameCell, centerCell(`${localImg(team?.jerseyUrl)}${teamName}`.trim()), r.time ?? "—"];
   });
@@ -336,7 +338,7 @@ export async function generateRacePost(_prevState: PostState, formData: FormData
     // Grand Tour stage(s) — the export itself carries the intermediate classifications
     // (general, points, mountain, team...): render each as its own table, read-only.
     const [riderIndex, teamIndex] = await Promise.all([buildRiderIndex(), buildTeamIndex()]);
-    extraSections = lastExtraSheets.map((sheet) => renderSheet(sheet, riderIndex, teamIndex));
+    extraSections = lastExtraSheets.map((sheet) => renderSheet(sheet, riderIndex, teamIndex, season));
   }
 
   const [riderRankings, teamRankings] = await Promise.all([getRiderRankings(season), getTeamRankings(season)]);

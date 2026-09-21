@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/session";
 import { normalizeTimeGap } from "@/lib/timeGap";
 import { findRankGaps } from "@/lib/rankGaps";
 import { normalizeName } from "@/lib/names";
+import { stintForSeason } from "@/lib/teamHistory";
 
 function str(fd: FormData, key: string): string {
   return (fd.get(key) as string | null)?.trim() ?? "";
@@ -217,11 +218,8 @@ export async function applyRaceResults(race: RaceForResults, entries: { rank: nu
   type Rider = (typeof riders)[number];
   const byName = new Map(riders.map((r) => [normalizeName(`${r.firstName} ${r.lastName}`), r]));
 
-  // The stint covering the race's own season — not the rider's current team — so
-  // importing an old season's results doesn't put riders on their present-day team
-  // (or flag season-N retirees as teamless just because they've since left the sport).
   function stintForRaceSeason(rider: Rider) {
-    return rider.stints.find((s) => s.startSeason <= race.season && (s.endSeason === null || s.endSeason > race.season)) ?? null;
+    return stintForSeason(rider.stints, race.season);
   }
 
   const sortedEntries = [...entries].sort((a, b) => a.rank - b.rank);
