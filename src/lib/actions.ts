@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma";
 import { computeResultPoints } from "@/lib/points";
-import { CALENDAR_TEMPLATE, GRAND_TOUR_STAGE_COUNT, grandTourStageProfile } from "@/lib/calendarTemplate";
+import { CALENDAR_TEMPLATE, GRAND_TOUR_STAGE_COUNT, GRAND_TOUR_JERSEYS, grandTourStageProfile } from "@/lib/calendarTemplate";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/session";
@@ -480,6 +480,20 @@ export async function generateSeasonCalendar(formData: FormData) {
             parentRaceId: race.id,
             stageNumber: n,
             profileUrl: grandTourStageProfile(entry.name, n, season),
+          },
+        });
+      }
+
+      for (const jerseyName of GRAND_TOUR_JERSEYS) {
+        await prisma.race.create({
+          data: {
+            name: `${entry.name} — ${jerseyName}`,
+            country: entry.country,
+            season,
+            categoryId: grandTour.id,
+            resultKind: "jersey",
+            parentRaceId: race.id,
+            jerseyName,
           },
         });
       }

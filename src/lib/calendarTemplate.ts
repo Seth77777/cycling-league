@@ -29,6 +29,11 @@ export const CALENDAR_TEMPLATE: { name: string; country: string; grandTour: bool
 
 export const GRAND_TOUR_STAGE_COUNT = 21;
 
+/** The 3 secondary classifications every Grand Tour carries alongside the general
+ * classification (its own hub race) — created as resultKind="jersey" child races
+ * so their results can be pasted in the same way as any other race. */
+export const GRAND_TOUR_JERSEYS = ["Montagne", "Sprint", "U25"] as const;
+
 /**
  * The 3 Grand Tours repeat their route on a 2-year cycle — odd seasons use the 2018
  * parcours, even seasons use 2017 — so a stage's profile image only needs 2 variants
