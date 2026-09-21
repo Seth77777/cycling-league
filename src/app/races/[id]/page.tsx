@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRaceDetail, fullName } from "@/lib/queries";
-import { createStage, createJersey, bulkAddResults, updateStage } from "@/lib/actions";
+import { createStage, createJersey, bulkAddResults, insertResult, updateStage } from "@/lib/actions";
 import { scaleForRace } from "@/lib/points";
 import { isAdmin } from "@/lib/session";
 import { RaceLogo } from "@/components/RaceLogo";
@@ -226,6 +226,30 @@ export default async function RaceDetailPage({
               Importer
             </button>
           </form>
+
+          {race.results.length > 0 && (
+            <>
+              <hr className="my-4 border-[var(--border)]" />
+              <h2 className="mb-1 font-semibold">Insérer un résultat</h2>
+              <p className="mb-3 text-xs text-[var(--text-dim)]">
+                Pour un coureur oublié (nom mal orthographié à l&apos;import, donc ignoré) sans tout ré-importer :
+                rang puis nom. Les rangs déjà présents à partir de celui-ci sont décalés d&apos;un cran.
+              </p>
+              <form action={insertResult} className="flex flex-wrap gap-3">
+                <input type="hidden" name="raceId" value={race.id} />
+                <input
+                  type="text"
+                  name="line"
+                  required
+                  className="input flex-1 font-mono text-xs"
+                  placeholder="4 Jeff Van Der Malen"
+                />
+                <button type="submit" className="btn btn-primary">
+                  Insérer
+                </button>
+              </form>
+            </>
+          )}
         </section>
       )}
 

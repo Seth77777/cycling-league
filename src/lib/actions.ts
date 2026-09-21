@@ -341,6 +341,73 @@ export async function bulkAddResults(formData: FormData) {
   redirect(`/races/${raceId}?imported=${imported}&skipped=${skipped}${gapsParam}`);
 }
 
+/**
+ * Inserts a single rider at a specific rank into an already-existing result set,
+ * shifting every rider currently at or below that rank down by one — for fixing a
+ * name that got silently skipped during the original paste (a typo, an unusual
+ * spelling…) without having to delete everything and re-paste the whole classement.
+ * Same "rang nom" line format as one row of the bulk-paste textarea.
+ */
+export async function insertResult(formData: FormData) {
+  await requireAdmin();
+  const raceId = str(formData, "raceId");
+  const line = ((formData.get("line") as string | null) ?? "").trim();
+  if (!raceId || !line) throw new Error("Une ligne 'rang nom' est requise");
+
+  const race = await prisma.race.findUniqueOrThrow({ where: { id: raceId }, include: { category: true } });
+
+  const tokens = line.split(/\s+/).filter(Boolean);
+  const rank = Number(tokens[0]);
+  if (!Number.isInteger(rank) || rank < 1) throw new Error("Rang invalide");
+  const nameTokens = tokens.slice(1);
+  if (nameTokens.length === 0) throw new Error("Nom du coureur requis");
+  const time = extractTimeGap(tokens) ?? "s.t.";
+
+  const riders = await prisma.rider.findMany({
+    where: { unpickedSeason: null },
+    include: { stints: { include: { team: true } } },
+  });
+  const byName = new Map(riders.map((r) => [normalizeName(`${r.firstName} ${r.lastName}`), r]));
+
+  let matched: (typeof riders)[number] | null = null;
+  for (let len = Math.min(5, nameTokens.length); len >= 2; len--) {
+    const candidate = normalizeName(nameTokens.slice(0, len).join(" "));
+    const hit = byName.get(candidate);
+    if (hit) {
+      matched = hit;
+      break;
+    }
+  }
+  if (!matched) throw new Error(`Coureur non reconnu : "${nameTokens.join(" ")}"`);
+
+  const stint = stintForSeason(matched.stints, race.season);
+  if (!stint?.teamId) {
+    throw new Error(
+      `${matched.firstName} ${matched.lastName} n'a pas d'équipe en saison ${race.season} — mets à jour son effectif avant d'importer.`,
+    );
+  }
+
+  // Shift downward from the bottom up so no two rows ever momentarily share a rank.
+  const toShift = await prisma.result.findMany({ where: { raceId, rank: { gte: rank } }, orderBy: { rank: "desc" } });
+  for (const r of toShift) {
+    const newRank = r.rank + 1;
+    await prisma.result.update({
+      where: { id: r.id },
+      data: { rank: newRank, points: computeResultPoints(race.category, race, newRank) },
+    });
+  }
+
+  await prisma.result.upsert({
+    where: { raceId_riderId: { raceId, riderId: matched.id } },
+    create: { raceId, riderId: matched.id, teamId: stint.teamId, rank, points: computeResultPoints(race.category, race, rank), time },
+    update: { rank, points: computeResultPoints(race.category, race, rank), teamId: stint.teamId, time },
+  });
+
+  revalidatePath(`/races/${raceId}`);
+  if (race.parentRaceId) revalidatePath(`/races/${race.parentRaceId}`);
+  revalidatePath("/rankings");
+}
+
 /** Removes a single result — e.g. a stage classification pasted into the wrong race
  * (general/mountain/points/team...) by mistake. Confirmed client-side before this runs. */
 export async function deleteResult(formData: FormData) {
