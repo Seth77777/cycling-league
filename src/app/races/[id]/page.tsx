@@ -216,9 +216,11 @@ export default async function RaceDetailPage({
           <p className="mb-3 text-xs text-[var(--text-dim)]">
             Une ligne par coureur : rang, nom du coureur, équipe (optionnelle), temps/écart (&quot;s.t.&quot;, &quot;+
             1&apos;24&quot;, &quot;4h15&apos;09&quot;&quot;…) — pas de temps du tout après le nom : considéré comme
-            s.t. automatiquement. L&apos;équipe utilisée est celle du coureur pendant la saison de cette course, pas
-            celle du texte collé ni son équipe actuelle. Les lignes dont le coureur n&apos;est pas reconnu (fautes de
-            frappe, coureurs simulés…) sont ignorées.
+            s.t. automatiquement. Le rang peut aussi être en dernière colonne plutôt qu&apos;en premier (utile pour un
+            classement final collé dans le désordre) — l&apos;ordre des lignes n&apos;a pas d&apos;importance, seul le
+            rang compte. L&apos;équipe utilisée est celle du coureur pendant la saison de cette course, pas celle du
+            texte collé ni son équipe actuelle. Les lignes dont le coureur n&apos;est pas reconnu (fautes de frappe,
+            coureurs simulés…) sont ignorées.
             {" "}Barème : {scale.join(" / ") || "non configuré"}
             {race.resultKind === "stage" && race.isTimeTrial && ` (×${race.category.stageTtMultiplier} car CLM)`}
           </p>

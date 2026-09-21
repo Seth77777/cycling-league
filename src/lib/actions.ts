@@ -321,14 +321,27 @@ export async function bulkAddResults(formData: FormData) {
     if (!line) continue;
 
     const tokens = line.split(/\s+/);
-    const rank = Number(tokens[0]);
-    if (!Number.isInteger(rank) || rank < 1) continue;
+    // Usually "rang  nom  équipe  temps" (rank first). Some classifications (e.g. a
+    // final U25 export) instead list a "Rang" column last, in no particular row
+    // order — if the line doesn't start with a rank, try the last token instead.
+    let rank: number;
+    let nameTokens: string[];
+    const firstToken = Number(tokens[0]);
+    const lastToken = Number(tokens[tokens.length - 1]);
+    if (Number.isInteger(firstToken) && firstToken >= 1) {
+      rank = firstToken;
+      nameTokens = tokens.slice(1);
+    } else if (tokens.length > 1 && Number.isInteger(lastToken) && lastToken >= 1) {
+      rank = lastToken;
+      nameTokens = tokens.slice(0, -1);
+    } else {
+      continue;
+    }
 
-    const rest = tokens.slice(1);
     // No recognizable time/gap token at all (just rank + name) — assume same time as
     // the leader rather than making the admin type "s.t." for most of the field.
     const time = extractTimeGap(tokens) ?? "s.t.";
-    entries.push({ rank, name: rest.join(" "), time });
+    entries.push({ rank, name: nameTokens.join(" "), time });
   }
 
   const { imported, skipped, gaps } = await applyRaceResults(race, entries);
