@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRiderProfile, fullName } from "@/lib/queries";
+import { computeResultPoints } from "@/lib/points";
 import { bandColor } from "@/lib/heat";
 import { STAT_COLUMNS } from "@/components/RidersStatsTable";
 import { Flag } from "@/components/Flag";
@@ -234,7 +235,16 @@ export default async function RiderProfilePage({ params }: { params: Promise<{ i
                     <td className="py-2 text-[var(--text-dim)]">{r.race.category.name}</td>
                     <td className="py-2 text-[var(--text-dim)]">{r.team?.name ?? "—"}</td>
                     <td className="py-2 text-[var(--text-dim)]">{r.race.season}</td>
-                    <td className="py-2 text-right font-mono">{r.points > 0 ? r.points : ""}</td>
+                    <td className="py-2 text-right font-mono">
+                      {r.race.isTeamTimeTrial
+                        ? (() => {
+                            const teamPoints = computeResultPoints(r.race.category, r.race, r.rank);
+                            return teamPoints > 0 ? `(${teamPoints} équipe)` : "";
+                          })()
+                        : r.points > 0
+                          ? r.points
+                          : ""}
+                    </td>
                   </tr>
                 ))}
               </tbody>

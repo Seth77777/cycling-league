@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRaceDetail, fullName } from "@/lib/queries";
 import { createStage, createJersey, bulkAddResults, insertResult, updateStage } from "@/lib/actions";
-import { scaleForRace } from "@/lib/points";
+import { scaleForRace, computeResultPoints } from "@/lib/points";
 import { isAdmin } from "@/lib/session";
 import { RaceLogo } from "@/components/RaceLogo";
 import { Flag } from "@/components/Flag";
@@ -186,7 +186,16 @@ export default async function RaceDetailPage({
                     )}
                   </td>
                   <td className="py-2 text-[var(--text-dim)]">{r.time ?? "—"}</td>
-                  <td className="py-2 text-right font-mono">{r.points > 0 ? `${r.points} pts` : ""}</td>
+                  <td className="py-2 text-right font-mono">
+                    {race.isTeamTimeTrial
+                      ? (() => {
+                          const teamPoints = computeResultPoints(race.category, race, r.rank);
+                          return teamPoints > 0 ? `(${teamPoints} équipe)` : "";
+                        })()
+                      : r.points > 0
+                        ? `${r.points} pts`
+                        : ""}
+                  </td>
                   {admin && (
                     <td className="py-2 pl-2 text-right">
                       <DeleteResultButton resultId={r.id} riderName={fullName(r.rider)} />

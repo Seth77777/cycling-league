@@ -288,6 +288,7 @@ export async function getRiderProfile(id: string) {
 
   const bySeason = new Map<number, number>();
   for (const r of rider.results) {
+    if (r.race.isTeamTimeTrial) continue;
     bySeason.set(r.race.season, (bySeason.get(r.race.season) ?? 0) + r.points);
   }
   const seasonPoints = [...bySeason.entries()].sort((a, b) => b[0] - a[0]);
