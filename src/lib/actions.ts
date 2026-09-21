@@ -154,6 +154,11 @@ export async function createStage(formData: FormData) {
 /** Toggles CLM/CLM par équipes on a stage that's already been created — the season
  * calendar generates all 21 stages up front with neither flag set, so this is the
  * only way to mark one after the fact, before pasting its results. */
+/**
+ * Toggling CLM/CLM par équipes doesn't just flag the race — any results already
+ * pasted before the box was checked need their points (and, for CLM par équipes,
+ * their rank) recomputed too, or checking the box silently does nothing to them.
+ */
 export async function updateStage(formData: FormData) {
   await requireAdmin();
   const raceId = str(formData, "raceId");
@@ -161,10 +166,46 @@ export async function updateStage(formData: FormData) {
   const isTimeTrial = str(formData, "isTimeTrial") === "on";
   const isTeamTimeTrial = str(formData, "isTeamTimeTrial") === "on";
 
-  const race = await prisma.race.update({ where: { id: raceId }, data: { isTimeTrial, isTeamTimeTrial } });
+  const race = await prisma.race.update({
+    where: { id: raceId },
+    data: { isTimeTrial, isTeamTimeTrial },
+    include: { category: true },
+  });
+
+  const results = await prisma.result.findMany({ where: { raceId }, orderBy: { rank: "asc" } });
+  if (isTeamTimeTrial) {
+    // Same derivation as applyRaceResults' TTT branch, using the existing sequential
+    // rank as the original pasted order (riders of a team appear consecutively).
+    const teamRankByTeamId = new Map<string, number>();
+    for (const r of results) {
+      if (r.teamId && !teamRankByTeamId.has(r.teamId)) teamRankByTeamId.set(r.teamId, teamRankByTeamId.size + 1);
+    }
+    const teamAlreadyScored = new Set<string>();
+    for (const r of results) {
+      const teamRank = r.teamId ? teamRankByTeamId.get(r.teamId) : undefined;
+      const newRank = teamRank ?? r.rank;
+      let newPoints = 0;
+      if (r.teamId) {
+        const isFirstOfTeam = !teamAlreadyScored.has(r.teamId);
+        teamAlreadyScored.add(r.teamId);
+        newPoints = isFirstOfTeam ? computeResultPoints(race.category, race, teamRank!) : 0;
+      }
+      if (newRank !== r.rank || newPoints !== r.points) {
+        await prisma.result.update({ where: { id: r.id }, data: { rank: newRank, points: newPoints } });
+      }
+    }
+  } else {
+    for (const r of results) {
+      const newPoints = computeResultPoints(race.category, race, r.rank);
+      if (newPoints !== r.points) {
+        await prisma.result.update({ where: { id: r.id }, data: { points: newPoints } });
+      }
+    }
+  }
 
   revalidatePath(`/races/${raceId}`);
   if (race.parentRaceId) revalidatePath(`/races/${race.parentRaceId}`);
+  revalidatePath("/rankings");
 }
 
 export async function createJersey(formData: FormData) {
@@ -322,26 +363,32 @@ export async function bulkAddResults(formData: FormData) {
 
     const tokens = line.split(/\s+/);
     // Usually "rang  nom  équipe  temps" (rank first). Some classifications (e.g. a
-    // final U25 export) instead list a "Rang" column last, in no particular row
-    // order — if the line doesn't start with a rank, try the last token instead.
+    // final U25 export) instead list the rank last, in no particular row order —
+    // either bare ("... 3") or parenthesized ("... + 10'57 (8)", a trailing "(N)"
+    // after the time/gap) — if the line doesn't start with a rank, try those.
     let rank: number;
-    let nameTokens: string[];
+    let contentTokens: string[];
     const firstToken = Number(tokens[0]);
-    const lastToken = Number(tokens[tokens.length - 1]);
+    const lastToken = tokens[tokens.length - 1];
+    const parenMatch = /^\((\d+)\)$/.exec(lastToken);
+    const lastAsNumber = Number(lastToken);
     if (Number.isInteger(firstToken) && firstToken >= 1) {
       rank = firstToken;
-      nameTokens = tokens.slice(1);
-    } else if (tokens.length > 1 && Number.isInteger(lastToken) && lastToken >= 1) {
-      rank = lastToken;
-      nameTokens = tokens.slice(0, -1);
+      contentTokens = tokens.slice(1);
+    } else if (parenMatch) {
+      rank = Number(parenMatch[1]);
+      contentTokens = tokens.slice(0, -1);
+    } else if (tokens.length > 1 && Number.isInteger(lastAsNumber) && lastAsNumber >= 1) {
+      rank = lastAsNumber;
+      contentTokens = tokens.slice(0, -1);
     } else {
       continue;
     }
 
     // No recognizable time/gap token at all (just rank + name) — assume same time as
     // the leader rather than making the admin type "s.t." for most of the field.
-    const time = extractTimeGap(tokens) ?? "s.t.";
-    entries.push({ rank, name: nameTokens.join(" "), time });
+    const time = extractTimeGap(contentTokens) ?? "s.t.";
+    entries.push({ rank, name: contentTokens.join(" "), time });
   }
 
   const { imported, skipped, gaps } = await applyRaceResults(race, entries);
