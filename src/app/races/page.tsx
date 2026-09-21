@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { getRaces, getLatestSeason, fullName } from "@/lib/queries";
 import { generateSeasonCalendar } from "@/lib/actions";
+import { GRAND_TOUR_STAGE_COUNT } from "@/lib/calendarTemplate";
 import { Flag } from "@/components/Flag";
 import { RaceLogo } from "@/components/RaceLogo";
+import { TeamJersey } from "@/components/TeamJersey";
 import { isAdmin } from "@/lib/session";
+
+function classificationLabel(jerseyName: string | null) {
+  return jerseyName ?? "Maillot";
+}
 
 export default async function RacesPage({ searchParams }: { searchParams: Promise<{ season?: string }> }) {
   const { season: seasonParam } = await searchParams;
@@ -78,7 +84,45 @@ export default async function RacesPage({ searchParams }: { searchParams: Promis
                 <td className="px-4 py-2 text-[var(--text-dim)]">{race.category.name}</td>
                 <td className="px-4 py-2 text-[var(--text-dim)]">
                   {race.category.kind === "grand-tour" ? (
-                    `${race._count.results} au général · ${race._count.children} étapes/maillots`
+                    (() => {
+                      const stagesWithResults = race.children.filter(
+                        (c) => c.resultKind === "stage" && c._count.results > 0,
+                      ).length;
+                      if (stagesWithResults < GRAND_TOUR_STAGE_COUNT) {
+                        return (
+                          <span>
+                            Non-terminé ({stagesWithResults}/{GRAND_TOUR_STAGE_COUNT} étapes)
+                          </span>
+                        );
+                      }
+
+                      const jerseys = race.children.filter((c) => c.resultKind === "jersey");
+                      const classifications = [
+                        { label: "Général", winner: race.results[0] },
+                        ...jerseys.map((j) => ({ label: classificationLabel(j.jerseyName), winner: j.results[0] })),
+                      ];
+
+                      return (
+                        <div className="flex flex-col gap-1 py-1">
+                          {classifications.map((c) => (
+                            <div key={c.label} className="flex items-center gap-1.5 text-xs">
+                              <span className="w-14 shrink-0">{c.label}</span>
+                              {c.winner ? (
+                                <span className="inline-flex items-center gap-1.5 text-[var(--text)]">
+                                  <TeamJersey jerseyUrl={c.winner.team?.jerseyUrl} color={c.winner.team?.color} className="h-4 w-4 rounded" />
+                                  <Flag nationality={c.winner.rider.nationality} />
+                                  <Link href={`/riders/${c.winner.rider.id}`} className="hover:text-[var(--accent)]">
+                                    {fullName(c.winner.rider)}
+                                  </Link>
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()
                   ) : race.results[0] ? (
                     <span className="inline-flex items-center gap-2">
                       <Flag nationality={race.results[0].rider.nationality} />

@@ -495,6 +495,17 @@ export async function getRaces(season?: number) {
       category: true,
       _count: { select: { results: true, children: true } },
       results: { where: { rank: 1 }, take: 1, include: { rider: true, team: true } },
+      // For a Grand Tour: each stage's result count (to tell if it's finished) and
+      // each jersey's own winner, alongside the hub's own (the general classification).
+      children: {
+        where: { resultKind: { in: ["stage", "jersey"] } },
+        select: {
+          resultKind: true,
+          jerseyName: true,
+          _count: { select: { results: true } },
+          results: { where: { rank: 1 }, take: 1, include: { rider: true, team: true } },
+        },
+      },
     },
     orderBy: { order: "asc" },
   });
