@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { getRaces, getLatestSeason, fullName } from "@/lib/queries";
 import { generateSeasonCalendar } from "@/lib/actions";
 import { GRAND_TOUR_STAGE_COUNT } from "@/lib/calendarTemplate";
@@ -9,6 +10,18 @@ import { isAdmin } from "@/lib/session";
 
 function classificationLabel(jerseyName: string | null) {
   return jerseyName ?? "Maillot";
+}
+
+// Light background tint for the 3 Grand Tour rows, so they stand out in the calendar.
+const GRAND_TOUR_TINTS: Record<string, string> = {
+  "Tour d'Italie": "#f9a8d4", // rose clair (Giro)
+  "Tour de France": "#fde047", // jaune clair
+  "Tour d'Espagne": "#fca5a5", // rouge clair (Vuelta)
+};
+
+function grandTourRowStyle(name: string): CSSProperties | undefined {
+  const tint = GRAND_TOUR_TINTS[name];
+  return tint ? { background: `color-mix(in srgb, ${tint} 35%, var(--surface))` } : undefined;
 }
 
 export default async function RacesPage({ searchParams }: { searchParams: Promise<{ season?: string }> }) {
@@ -63,7 +76,11 @@ export default async function RacesPage({ searchParams }: { searchParams: Promis
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
             {races.map((race) => (
-              <tr key={race.id} className="bg-[var(--surface)] hover:bg-[var(--surface-2)]">
+              <tr
+                key={race.id}
+                className={grandTourRowStyle(race.name) ? undefined : "bg-[var(--surface)] hover:bg-[var(--surface-2)]"}
+                style={grandTourRowStyle(race.name)}
+              >
                 <td className="px-4 py-2">
                   <Link href={`/races/${race.id}`} className="inline-flex items-center gap-2 hover:text-[var(--accent)]">
                     <RaceLogo logoUrl={race.logoUrl} />
