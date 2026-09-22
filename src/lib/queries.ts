@@ -513,15 +513,27 @@ export async function getRaces(season?: number) {
 }
 
 /** Whether every race of a season has a result — and, for each Grand Tour, all its
- * stages too — same completeness rule as the "Non-terminé" badge on the calendar. */
+ * stages too — same completeness rule as the "Non-terminé" badge on the calendar.
+ * Runs on every dashboard and team-page load, so a lightweight counts-only query —
+ * not the full getRaces() (which pulls rider/team objects for every result). */
 export async function isSeasonComplete(season: number): Promise<boolean> {
-  const races = await getRaces(season);
+  const races = await prisma.race.findMany({
+    where: { resultKind: "race", parentRaceId: null, season },
+    select: {
+      category: { select: { kind: true } },
+      _count: { select: { results: true } },
+      children: {
+        where: { resultKind: "stage" },
+        select: { _count: { select: { results: true } } },
+      },
+    },
+  });
   if (races.length === 0) return false;
 
   return races.every((race) => {
     if (race._count.results === 0) return false;
     if (race.category.kind === "grand-tour") {
-      const stagesWithResults = race.children.filter((c) => c.resultKind === "stage" && c._count.results > 0).length;
+      const stagesWithResults = race.children.filter((c) => c._count.results > 0).length;
       if (stagesWithResults < GRAND_TOUR_STAGE_COUNT) return false;
     }
     return true;
