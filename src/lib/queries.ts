@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Rider } from "@/generated/prisma";
 import type { RiderRow } from "@/components/RidersStatsTable";
+import { GRAND_TOUR_STAGE_COUNT } from "@/lib/calendarTemplate";
 
 export function fullName(r: { firstName: string; lastName: string }) {
   return `${r.firstName} ${r.lastName}`;
@@ -508,6 +509,22 @@ export async function getRaces(season?: number) {
       },
     },
     orderBy: { order: "asc" },
+  });
+}
+
+/** Whether every race of a season has a result — and, for each Grand Tour, all its
+ * stages too — same completeness rule as the "Non-terminé" badge on the calendar. */
+export async function isSeasonComplete(season: number): Promise<boolean> {
+  const races = await getRaces(season);
+  if (races.length === 0) return false;
+
+  return races.every((race) => {
+    if (race._count.results === 0) return false;
+    if (race.category.kind === "grand-tour") {
+      const stagesWithResults = race.children.filter((c) => c.resultKind === "stage" && c._count.results > 0).length;
+      if (stagesWithResults < GRAND_TOUR_STAGE_COUNT) return false;
+    }
+    return true;
   });
 }
 

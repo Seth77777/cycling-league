@@ -562,3 +562,55 @@ export async function generateSeasonCalendar(formData: FormData) {
 
   revalidatePath("/races");
 }
+
+/**
+ * Records one draft pick as it happens — instead of the one-off
+ * prisma/import-seasonN-draft.ts scripts, which were only ever run after a whole
+ * draft was already known. Same effect as those scripts, one pick at a time: sets
+ * the rider's draftSeason/draftPick, and gives them a TeamStint starting next
+ * season if the drafting team differs from (or replaces the absence of) their
+ * current team.
+ */
+export async function addDraftPick(formData: FormData) {
+  await requireAdmin();
+  const season = Number(str(formData, "season"));
+  const teamId = str(formData, "teamId");
+  const riderName = str(formData, "riderName");
+  if (!season || !teamId || !riderName) throw new Error("Saison, équipe et coureur sont requis");
+
+  const joinSeason = season + 1;
+
+  const nameTokens = riderName.split(/\s+/).filter(Boolean);
+  const riders = await prisma.rider.findMany({
+    where: { unpickedSeason: null },
+    include: { stints: { where: { endSeason: null }, include: { team: true } } },
+  });
+  const byName = new Map(riders.map((r) => [normalizeName(`${r.firstName} ${r.lastName}`), r]));
+
+  let matched: (typeof riders)[number] | null = null;
+  for (let len = Math.min(5, nameTokens.length); len >= 2; len--) {
+    const candidate = normalizeName(nameTokens.slice(0, len).join(" "));
+    const hit = byName.get(candidate);
+    if (hit) {
+      matched = hit;
+      break;
+    }
+  }
+  if (!matched) throw new Error(`Coureur non reconnu : "${riderName}"`);
+
+  const nextPick = (await prisma.rider.count({ where: { draftSeason: season, draftPick: { not: null } } })) + 1;
+  await prisma.rider.update({ where: { id: matched.id }, data: { draftSeason: season, draftPick: nextPick } });
+
+  const currentStint = matched.stints[0];
+  if (!currentStint) {
+    // Genuinely new prospect, never had a team — an open-ended contract starting next season.
+    await prisma.teamStint.create({ data: { riderId: matched.id, teamId, startSeason: joinSeason, endSeason: null } });
+  } else if (currentStint.teamId !== teamId) {
+    // Drafted by a different team than the one they're currently on — transfer, same
+    // shape as the historical import scripts (starts and ends the same season: they
+    // move before ever playing a game on their old team).
+    await prisma.teamStint.create({ data: { riderId: matched.id, teamId, startSeason: joinSeason, endSeason: joinSeason } });
+  }
+
+  revalidatePath(`/draft?season=${season}`);
+}

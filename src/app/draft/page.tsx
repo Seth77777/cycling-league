@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { getDraftBoard, getLatestSeason, fullName } from "@/lib/queries";
+import { getDraftBoard, getLatestSeason, listSeasons, isSeasonComplete, fullName } from "@/lib/queries";
+import { addDraftPick } from "@/lib/actions";
 import { bandColor } from "@/lib/heat";
 import { STAT_COLUMNS } from "@/components/RidersStatsTable";
 import { Flag } from "@/components/Flag";
+import { isAdmin } from "@/lib/session";
 
 export default async function DraftPage({ searchParams }: { searchParams: Promise<{ season?: string }> }) {
   const { season: seasonParam } = await searchParams;
@@ -11,6 +13,11 @@ export default async function DraftPage({ searchParams }: { searchParams: Promis
   const seasons = Array.from({ length: latestSeason }, (_, i) => i + 1);
 
   const { standingsOrder, picksInOrder, pool, retirees } = await getDraftBoard(season);
+  const admin = await isAdmin();
+  // Not latestSeason: the first pick's TeamStint already starts next season, which
+  // would immediately push getLatestSeason() forward and hide this form again.
+  const currentRaceSeason = (await listSeasons())[0];
+  const canAddPicks = admin && season === currentRaceSeason && (await isSeasonComplete(season));
 
   return (
     <div className="flex flex-col gap-6">
@@ -197,6 +204,32 @@ export default async function DraftPage({ searchParams }: { searchParams: Promis
           </div>
         )}
       </section>
+
+      {canAddPicks && (
+        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+          <h2 className="mb-3 font-semibold">Ajouter un pick</h2>
+          <form action={addDraftPick} className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="season" value={season} />
+            <label className="flex flex-col gap-1 text-xs text-[var(--text-dim)]">
+              Équipe
+              <select name="teamId" required className="input">
+                {standingsOrder.map((s) => (
+                  <option key={s.team.id} value={s.team.id}>
+                    {s.team.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-[var(--text-dim)]">
+              Coureur pioché
+              <input name="riderName" required className="input" placeholder="Prénom Nom" />
+            </label>
+            <button type="submit" className="btn btn-primary">
+              Ajouter le pick #{picksInOrder.length + 1}
+            </button>
+          </form>
+        </section>
+      )}
     </div>
   );
 }

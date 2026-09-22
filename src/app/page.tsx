@@ -7,6 +7,7 @@ import {
   getRandomRiderCard,
   getDefendingChampion,
   listSeasons,
+  isSeasonComplete,
   fullName,
 } from "@/lib/queries";
 import { Flag } from "@/components/Flag";
@@ -34,11 +35,12 @@ function SeeAll({ href, compact = false }: { href: string; compact?: boolean }) 
 export default async function DashboardPage() {
   const seasons = await listSeasons();
   const currentSeason = seasons[0];
-  const [riderRankings, teamRankings, nationRankings, nextRace, randomRiderCard] = await Promise.all([
+  const [riderRankings, teamRankings, nationRankings, nextRace, seasonComplete, randomRiderCard] = await Promise.all([
     currentSeason ? getRiderRankings(currentSeason) : Promise.resolve([]),
     currentSeason ? getTeamRankings(currentSeason) : Promise.resolve([]),
     currentSeason ? getNationRankings(currentSeason) : Promise.resolve([]),
     currentSeason ? getNextRace(currentSeason) : Promise.resolve(null),
+    currentSeason ? isSeasonComplete(currentSeason) : Promise.resolve(false),
     getRandomRiderCard(),
   ]);
 
@@ -102,6 +104,26 @@ export default async function DashboardPage() {
               />
             </div>
           )}
+        </section>
+      )}
+
+      {!nextRace && seasonComplete && currentSeason && (
+        <section className="overflow-hidden rounded-lg border border-[var(--border)]">
+          <div className="flex flex-wrap items-center gap-8 bg-[var(--ink)] px-6 py-5">
+            <div className="text-xs font-medium tracking-wide text-white/50">À venir</div>
+            <Link
+              href={`/draft?season=${currentSeason}`}
+              className="font-display block text-2xl leading-tight !text-white hover:!text-[var(--accent)]"
+            >
+              Draft S{currentSeason}
+            </Link>
+            <Link
+              href={`/races?season=${currentSeason + 1}`}
+              className="font-display block text-2xl leading-tight !text-white hover:!text-[var(--accent)]"
+            >
+              Pré-Saison S{currentSeason + 1}
+            </Link>
+          </div>
         </section>
       )}
 
