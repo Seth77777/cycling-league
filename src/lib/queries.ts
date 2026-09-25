@@ -25,11 +25,26 @@ export interface TeamRosterGroup {
   riders: RiderRow[];
 }
 
-/** Every team's current (endSeason === null) roster — for the team-by-team training view. */
-export async function getTeamsWithActiveRosters(): Promise<TeamRosterGroup[]> {
+/**
+ * Every team's roster for a given season — for the team-by-team training view.
+ * Defaults to "current" (endSeason === null) when no season is given, but training
+ * is meant to happen on the season that just wrapped up, *before* any draft picks
+ * for next season lock in — pass that season explicitly, since a freshly-drafted
+ * rookie's stint already starts next season and would otherwise show up here too
+ * early (stintForSeason-style filtering, see src/lib/teamHistory.ts).
+ */
+export async function getTeamsWithActiveRosters(season?: number): Promise<TeamRosterGroup[]> {
   const teams = await prisma.team.findMany({
     orderBy: { name: "asc" },
-    include: { stints: { where: { endSeason: null }, include: { rider: true } } },
+    include: {
+      stints: {
+        where:
+          season != null
+            ? { startSeason: { lte: season }, OR: [{ endSeason: null }, { endSeason: { gt: season } }] }
+            : { endSeason: null },
+        include: { rider: true },
+      },
+    },
   });
 
   return teams
@@ -46,10 +61,14 @@ export async function getTeamsWithActiveRosters(): Promise<TeamRosterGroup[]> {
     .filter((t) => t.riders.length > 0);
 }
 
-/** All currently rostered, non-retired riders across every team — for the individual simulator's search. */
-export async function getActiveRidersFlat(): Promise<RiderRow[]> {
+/** All rostered, non-retired riders for a given season — for the individual simulator's
+ * search. Same season-scoping rationale as getTeamsWithActiveRosters. */
+export async function getActiveRidersFlat(season?: number): Promise<RiderRow[]> {
   const stints = await prisma.teamStint.findMany({
-    where: { endSeason: null },
+    where:
+      season != null
+        ? { startSeason: { lte: season }, OR: [{ endSeason: null }, { endSeason: { gt: season } }] }
+        : { endSeason: null },
     include: { rider: true, team: true },
   });
   return stints

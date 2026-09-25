@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { getTeamsWithActiveRosters, getActiveRidersFlat } from "@/lib/queries";
+import { getTeamsWithActiveRosters, getActiveRidersFlat, listSeasons } from "@/lib/queries";
 import { TrainingProjection } from "@/components/TrainingProjection";
 
 export default async function TrainingProjectionPage() {
-  const [teams, riders] = await Promise.all([getTeamsWithActiveRosters(), getActiveRidersFlat()]);
+  const currentSeason = (await listSeasons())[0] ?? 1;
+  const [teams, riders] = await Promise.all([
+    getTeamsWithActiveRosters(currentSeason),
+    getActiveRidersFlat(currentSeason),
+  ]);
 
   return (
     <div className="space-y-6">

@@ -1,14 +1,16 @@
 import Link from "next/link";
-import { getTeamsWithActiveRosters, getActiveRidersFlat, getLatestSeason } from "@/lib/queries";
+import { getTeamsWithActiveRosters, getActiveRidersFlat, listSeasons } from "@/lib/queries";
 import { SingleSeasonTraining } from "@/components/SingleSeasonTraining";
 
 export default async function TrainingPage() {
-  const [teams, riders, latestSeason] = await Promise.all([
-    getTeamsWithActiveRosters(),
-    getActiveRidersFlat(),
-    getLatestSeason(),
+  // Not getLatestSeason(): a draft pick's TeamStint already starts next season, which
+  // would push the "current" season forward before the season it belongs to is done.
+  const currentSeason = (await listSeasons())[0] ?? 1;
+  const [teams, riders] = await Promise.all([
+    getTeamsWithActiveRosters(currentSeason),
+    getActiveRidersFlat(currentSeason),
   ]);
-  const nextSeason = latestSeason + 1;
+  const nextSeason = currentSeason + 1;
 
   return (
     <div className="space-y-6">
