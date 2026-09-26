@@ -82,6 +82,7 @@ async function main() {
   await backfill(1, "season1-riders.tsv", 1);
   await backfill(2, "season2-riders.tsv", 2);
   await backfill(3, "season3-riders.tsv", 2);
+  await backfill(4, "season4-riders.tsv", 2);
 }
 
 main()
