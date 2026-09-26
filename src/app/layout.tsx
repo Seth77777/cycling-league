@@ -13,6 +13,13 @@ export const metadata: Metadata = {
   description: "Race results, rankings, calendar and rider histories",
 };
 
+// Every page here needs a live DB read (cookies via isAdmin() already make most of
+// them dynamic, but Next still executes each page once at build time to detect that,
+// which means hitting Turso during the build itself — if that connection is slow or
+// flaky, the build hangs and times out (as happened on /teams). Force dynamic
+// rendering site-wide so no page is ever touched at build time.
+export const dynamic = "force-dynamic";
+
 const NAV = [
   { href: "/", label: "Tableau de bord" },
   { href: "/riders", label: "Coureurs" },
